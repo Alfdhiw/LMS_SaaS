@@ -1,0 +1,58 @@
+erDiagram
+    TENANT_MEMBERSHIPS ||--o| STUDENT_PROFILES : as_student
+    TENANT_MEMBERSHIPS ||--o| TEACHER_PROFILES : as_teacher
+    ACADEMIC_YEARS ||--|{ SEMESTERS : consists_of
+    ACADEMIC_YEARS ||--o{ CLASSROOMS : has
+    CLASSROOMS ||--o{ CLASSROOM_ENROLLMENTS : places
+    STUDENT_PROFILES ||--o{ CLASSROOM_ENROLLMENTS : enrolled_in
+    TEACHER_PROFILES ||--o{ CLASSROOMS : homeroom_for
+    SEMESTERS ||--o{ COURSES : scheduled_for
+    CLASSROOMS ||--o{ COURSES : learns
+    SUBJECTS ||--o{ COURSES : subject_of
+    COURSES ||--o{ COURSE_TEACHERS : taught_by
+    TEACHER_PROFILES ||--o{ COURSE_TEACHERS : teaches
+    COURSES ||--o{ COURSE_ENROLLMENTS : registers
+    STUDENT_PROFILES ||--o{ COURSE_ENROLLMENTS : participates
+
+    ACADEMIC_YEARS {
+      bigint id PK
+      bigint tenant_id FK
+      varchar name
+    }
+    SEMESTERS {
+      bigint id PK
+      bigint tenant_id FK
+      bigint academic_year_id FK
+      varchar code
+    }
+    CLASSROOMS {
+      bigint id PK
+      bigint tenant_id FK
+      bigint academic_year_id FK
+      varchar code
+      bigint homeroom_teacher_profile_id FK "nullable"
+    }
+    SUBJECTS {
+      bigint id PK
+      bigint tenant_id FK
+      varchar code
+      varchar name
+    }
+    COURSES {
+      bigint id PK
+      bigint tenant_id FK
+      bigint academic_year_id FK
+      bigint semester_id FK
+      bigint classroom_id FK
+      bigint subject_id FK
+    }
+    STUDENT_PROFILES {
+      bigint id PK
+      bigint tenant_id FK
+      bigint membership_id FK
+    }
+    TEACHER_PROFILES {
+      bigint id PK
+      bigint tenant_id FK
+      bigint membership_id FK
+    }

@@ -1,0 +1,28 @@
+name: M0 checks
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require committed Composer lockfile
+        run: test -f composer.lock && git ls-files --error-unmatch composer.lock
+      - name: Setup official Laravel skeleton and services
+        run: bash scripts/setup.sh
+      - name: PHP coding standard
+        run: docker compose exec -T app ./vendor/bin/pint --test
+      - name: All tests
+        run: docker compose exec -T app php artisan test
+      - name: Service status
+        if: always()
+        run: docker compose ps
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --tail=100
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v

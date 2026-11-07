@@ -1,0 +1,47 @@
+erDiagram
+    COURSES ||--o{ COURSE_SECTIONS : organizes
+    COURSES ||--o{ LEARNING_MATERIALS : contains
+    COURSE_SECTIONS ||--o{ LEARNING_MATERIALS : groups
+    LEARNING_MATERIALS ||--o{ MATERIAL_ATTACHMENTS : has
+    UPLOADED_FILES ||--o{ MATERIAL_ATTACHMENTS : links
+    COURSES ||--o{ ASSIGNMENTS : contains
+    ASSIGNMENTS ||--o{ ASSIGNMENT_ATTACHMENTS : has
+    UPLOADED_FILES ||--o{ ASSIGNMENT_ATTACHMENTS : links
+    ASSIGNMENTS ||--o{ ASSIGNMENT_SUBMISSIONS : receives
+    COURSE_ENROLLMENTS ||--o{ ASSIGNMENT_SUBMISSIONS : eligible_for
+    ASSIGNMENT_SUBMISSIONS ||--o{ SUBMISSION_ATTACHMENTS : has
+    UPLOADED_FILES ||--o{ SUBMISSION_ATTACHMENTS : links
+    ASSIGNMENT_SUBMISSIONS ||--o| ASSIGNMENT_GRADES : evaluated_as
+    COURSE_TEACHERS ||--o{ ASSIGNMENT_GRADES : grades
+
+    LEARNING_MATERIALS {
+      bigint id PK
+      bigint tenant_id FK
+      bigint course_id FK
+      bigint section_id FK "nullable"
+    }
+    UPLOADED_FILES {
+      bigint id PK
+      bigint tenant_id FK
+      varchar object_key
+      varchar visibility
+    }
+    ASSIGNMENTS {
+      bigint id PK
+      bigint tenant_id FK
+      bigint course_id FK
+    }
+    ASSIGNMENT_SUBMISSIONS {
+      bigint id PK
+      bigint tenant_id FK
+      bigint course_id FK
+      bigint assignment_id FK
+      bigint student_profile_id FK
+    }
+    ASSIGNMENT_GRADES {
+      bigint id PK
+      bigint tenant_id FK
+      bigint course_id FK
+      bigint submission_id FK
+      bigint grader_teacher_profile_id FK
+    }

@@ -1,0 +1,5 @@
+[
+  {"slug":"smpn10-demo","name":"SMP Negeri 10 Demo","status":"synthetic_only"},
+  {"slug":"smpn05-demo","name":"SMP Negeri 5 Demo","status":"synthetic_only"},
+  {"slug":"smp-swasta-demo","name":"SMP Swasta Demo","status":"synthetic_only"}
+]
