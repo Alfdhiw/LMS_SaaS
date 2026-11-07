@@ -11,6 +11,8 @@
 /.vscode/
 /.fleet/
 /.m0-laravel-scaffold/
+# Project documentation is kept local and ignored per project request.
+/docs/
 /.phpunit-watcher.yml
 /storage/*.key
 /storage/logs/*
