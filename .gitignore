@@ -11,8 +11,13 @@
 /.vscode/
 /.fleet/
 /.m0-laravel-scaffold/
-# Project documentation is kept local and ignored per project request.
-/docs/
+# Project documentation is local by default; keep approval records versioned.
+/docs/*
+!/docs/
+!/docs/DOCUMENT_INDEX.md
+!/docs/runbooks/
+/docs/runbooks/*
+!/docs/runbooks/M1_ARCHITECTURE_GATE.md
 /.phpunit-watcher.yml
 /storage/*.key
 /storage/logs/*
