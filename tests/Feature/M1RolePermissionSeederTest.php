@@ -34,7 +34,7 @@ class M1RolePermissionSeederTest extends TestCase
         $this->assertSame($firstCounts['permissions'], DB::table('permissions')->count());
         $this->assertSame($firstCounts['role_permissions'], DB::table('role_permissions')->count());
         $this->assertSame(4, $firstCounts['roles']);
-        $this->assertSame(6, DB::table('permissions')->where('scope', 'platform')->count());
+        $this->assertSame(7, DB::table('permissions')->where('scope', 'platform')->count());
         $this->assertSame(0, DB::table('role_permissions')
             ->join('permissions', 'permissions.id', '=', 'role_permissions.permission_id')
             ->where('permissions.scope', 'platform')

@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\EnsureCentralMfaPending;
+use App\Http\Middleware\EnsureCentralPermission;
+use App\Http\Middleware\EnsureTenantPermission;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,7 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'central.mfa.pending' => EnsureCentralMfaPending::class,
+            'central.permission' => EnsureCentralPermission::class,
+            'tenant.permission' => EnsureTenantPermission::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

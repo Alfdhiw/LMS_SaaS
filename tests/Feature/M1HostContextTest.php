@@ -92,27 +92,25 @@ class M1HostContextTest extends TestCase
             'pending-tenant.platform.test',
             'localhost',
         ] as $host) {
-            $this->get('http://'.$host.'/tenant')
+            $this->get('http://'.$host.'/login')
                 ->assertNotFound();
         }
     }
 
-    public function test_valid_tenant_host_reaches_only_protected_placeholder(): void
+    public function test_valid_tenant_host_reaches_tenant_login_without_cross_host_fallback(): void
     {
         $this->tenantWithDomain('sekolah-a', 'sekolah-a.platform.test');
 
-        $this->get('http://sekolah-a.platform.test/tenant')
-            ->assertForbidden();
+        $this->get('http://sekolah-a.platform.test/login')->assertOk();
     }
 
     public function test_central_host_is_allowlisted_and_never_matches_localhost_or_tenant_host(): void
     {
         $this->tenantWithDomain('sekolah-a', 'sekolah-a.platform.test');
 
-        $this->get('http://'.config('saas.central_host').'/central')
-            ->assertForbidden();
+        $this->get('http://'.config('saas.central_host').'/login')->assertOk();
 
-        $this->get('http://localhost/central')
+        $this->get('http://localhost/login')
             ->assertNotFound();
 
         $this->get('http://sekolah-a.platform.test/central')

@@ -58,6 +58,7 @@ class RolePermissionSeeder extends Seeder
         'platform.tenants.transition' => ['description' => 'Mengubah status tenant', 'scope' => 'platform'],
         'platform.plans.assign' => ['description' => 'Menetapkan paket tenant', 'scope' => 'platform'],
         'platform.audit.view' => ['description' => 'Melihat audit platform', 'scope' => 'platform'],
+        'platform.staff.mfa_reset' => ['description' => 'Mereset MFA staf platform secara teraudit', 'scope' => 'platform'],
     ];
 
     /**

@@ -18,6 +18,7 @@
 !/docs/runbooks/
 /docs/runbooks/*
 !/docs/runbooks/M1_ARCHITECTURE_GATE.md
+!/docs/runbooks/M1_CENTRAL_MFA_RUNBOOK.md
 /.phpunit-watcher.yml
 /storage/*.key
 /storage/logs/*

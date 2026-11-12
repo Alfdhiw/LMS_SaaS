@@ -57,3 +57,11 @@ Jika satu dokumen berubah, revisi indeks ini dan tautan ke versi terbaru pada `A
 3. Setujui identitas global, membership scoped, cookie host-only, no implicit staff bypass.
 4. Setujui ERD v1.1 (termasuk invite/recovery/provisioning/settings dan constraint PostgreSQL).
 5. Tetapkan pilihan runtime/dependency final setelah compatibility spike M0.
+
+## G. Evidence review PR3
+
+PR3 telah melalui technical review dan regression test pada branch `Milestone-1`. Cakupannya meliputi host-bound authentication, tenant RBAC, platform permission mapping, dan central MFA. Hasil test dan status approval manusia dicatat di `docs/runbooks/M1_ARCHITECTURE_GATE.md`; Codex tidak mengubah status menjadi accepted tanpa approval reviewer manusia.
+
+Central MFA sudah tersedia untuk enrollment, challenge TOTP, serta reset/re-enrollment terkontrol yang diaudit melalui permission
+`platform.staff.mfa_reset`. Risiko produksi yang tersisa adalah verifikasi manual, HTTPS, session backend, backup secret terenkripsi,
+dan verifikasi manual multi-host. PR3 disetujui pengguna pada 2026-11-12; PR4 menunggu commit pengguna dan belum dimulai.
