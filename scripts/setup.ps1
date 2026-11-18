@@ -45,6 +45,9 @@ if ($LASTEXITCODE -ne 0) { throw 'Service Laravel gagal berjalan.' }
 docker compose exec -T app php artisan migrate --force
 if ($LASTEXITCODE -ne 0) { throw 'Migrasi baseline Laravel gagal.' }
 
+docker compose exec -T app php artisan db:seed --force
+if ($LASTEXITCODE -ne 0) { throw 'Seed katalog role dan permission gagal.' }
+
 docker compose exec -T app php artisan test --filter=M0
 if ($LASTEXITCODE -ne 0) { throw 'M0 smoke test gagal.' }
 

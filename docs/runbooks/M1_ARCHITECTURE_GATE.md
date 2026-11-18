@@ -56,7 +56,39 @@ Approval record PR3:
 ```text
 PR3: [x] Approved — reviewer: user (chat approval) date: 2026-11-12
 Scope: Auth/RBAC, platform permission mapping, central MFA, audited MFA reset/re-enrollment.
-Next gate: tunggu commit pengguna sebelum memulai PR4.
+Next gate: review dan approval PR4 sebelum memulai PR5.
 ```
+
+## PR4 review evidence
+
+PR4 implementation evidence:
+
+- `M1ProvisioningTest`: 9 test, 83 assertion, lulus.
+- Full suite M0/M1: 42 test, 227 assertion, lulus.
+- Pint: 80 file, lulus.
+- Migration status: seluruh 5 migration berstatus `Ran` pada PostgreSQL Docker.
+- Route provisioning dan lifecycle memakai `central.permission` sesuai action.
+- Provisioning membuat tenant pending, default domain, settings, pending admin, invitation hash, idempotency record,
+  dan audit dalam transaction.
+- Activation hanya menerima host tenant pending; wrong-host, expired, dan replay ditolak tanpa side effect.
+- Lifecycle mengharuskan admin active untuk activate/restore, menaikkan membership auth version saat suspend/archive,
+  serta menolak archive sebelum checklist offboarding selesai.
+- Token invitation hanya tersedia pada environment local/testing dan tidak masuk audit metadata.
+
+Status: **technical review implemented; approval manusia PR4 belum dicatat**. PR5 belum dimulai.
+
+## PR4 hardening follow-up evidence
+
+- Delivery invitation email dikirim setelah transaksi provisioning selesai; kegagalan tidak membatalkan tenant, dicatat
+  sebagai audit `tenant.invitation.delivery_failed`, dan dapat diulang dengan rotasi token melalui endpoint resend.
+- `TenantProvisioningService` memakai PostgreSQL advisory transaction lock untuk actor/idempotency key. Test dua proses
+  paralel membuktikan satu tenant tercipta dan request lain melakukan replay (`M1ProvisioningConcurrencyTest`: 1 test,
+  7 assertion, lulus).
+- UI central Blade tersedia untuk directory, detail tenant, provisioning, resend invitation, dan lifecycle transition.
+- `scripts/m1-host-smoke.ps1` memeriksa central host, unknown host, loopback, dan sampai tiga tenant aktif menggunakan
+  `curl --resolve`, tanpa perlu mengubah Windows hosts file.
+- Test delivery/resend dan UI ditambahkan ke `M1ProvisioningTest`; seluruh data tetap sintetis.
+
+Status follow-up: **technical review implemented; approval manusia PR4 tetap belum dicatat**. PR5 belum dimulai.
 
 Setelah perubahan keputusan, update status di dokumen asli dan `docs/DOCUMENT_INDEX.md`; simpan riwayat, jangan hapus versi lama. Draft migration disesuaikan jika review mengubah schema.

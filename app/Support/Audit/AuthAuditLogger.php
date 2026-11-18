@@ -17,13 +17,14 @@ final class AuthAuditLogger
         ?int $actorMembershipId = null,
         ?string $targetId = null,
         array $metadata = [],
+        string $targetType = 'authentication',
     ): void {
         DB::table('tenant_audit_logs')->insert([
             'tenant_id' => $context->tenantId,
             'actor_user_id' => $actorUserId,
             'actor_membership_id' => $actorMembershipId,
             'action' => $action,
-            'target_type' => 'authentication',
+            'target_type' => $targetType,
             'target_id' => $targetId,
             'request_id' => $this->requestId($request),
             'metadata_json' => $this->metadata($metadata),
@@ -37,11 +38,14 @@ final class AuthAuditLogger
         ?int $actorUserId = null,
         ?string $targetId = null,
         array $metadata = [],
+        ?int $tenantId = null,
+        string $targetType = 'authentication',
     ): void {
         DB::table('platform_audit_logs')->insert([
             'actor_user_id' => $actorUserId,
+            'tenant_id' => $tenantId,
             'action' => $action,
-            'target_type' => 'authentication',
+            'target_type' => $targetType,
             'target_id' => $targetId,
             'request_id' => $this->requestId($request),
             'metadata_json' => $this->metadata($metadata),

@@ -10,6 +10,13 @@ return [
     'allow_local_http' => env('APP_ENV') === 'local',
     'central_mfa_required_in_production' => true,
     'central_mfa_required' => env('SAAS_CENTRAL_MFA_REQUIRED', false),
+    'provisioning_invitation_ttl_hours' => (int) env('SAAS_PROVISIONING_INVITATION_TTL_HOURS', 72),
+    'invitation_delivery' => [
+        'enabled' => (bool) env('SAAS_INVITATION_DELIVERY_ENABLED', true),
+        'mailer' => env('SAAS_INVITATION_MAILER'),
+        'url_scheme' => env('SAAS_INVITATION_URL_SCHEME', env('APP_ENV') === 'local' ? 'http' : 'https'),
+    ],
+    'reserved_tenant_slugs' => ['admin', 'www', 'api', 'support', 'static'],
     'platform_role_permissions' => [
         'super_admin' => [
             'platform.tenants.view',

@@ -1,9 +1,18 @@
 <?php
 
+use App\Http\Controllers\Auth\TenantActivationController;
 use App\Http\Controllers\Auth\TenantAuthController;
 use App\Http\Middleware\EnsureTenantSession;
+use App\Http\Middleware\RequireTenantActivationHost;
 use App\Http\Middleware\RequireTenantHost;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware(RequireTenantActivationHost::class)->group(function (): void {
+    Route::get('/activate/{invitationPublicUlid}/{token}', [TenantActivationController::class, 'show'])
+        ->name('tenant.activation.show');
+    Route::post('/activate/{invitationPublicUlid}/{token}', [TenantActivationController::class, 'activate'])
+        ->name('tenant.activation.activate');
+});
 
 Route::middleware(RequireTenantHost::class)->group(function (): void {
     Route::get('/login', [TenantAuthController::class, 'showLogin'])->name('tenant.login');

@@ -1,6 +1,6 @@
 # LMS SaaS Multi-Sekolah — Milestone M0 Starter
 
-**Status:** M0 development kit; bootstrap Laravel resmi harus dijalankan pada komputer dengan Docker + akses internet. Belum merupakan aplikasi LMS siap produksi. Semua PRD/ADR/ERD masih `Proposed`.
+**Status:** M1 development baseline; aplikasi belum siap produksi. PR4 telah diimplementasikan secara teknis pada branch `Milestone-1`, tetapi approval manusia PR4 dan hardening production masih terbuka.
 
 ## 1. Apa yang tersedia
 
@@ -8,10 +8,11 @@
 - Skrip bootstrap yang mengambil **skeleton resmi `laravel/laravel:^13.0`** dari Packagist saat pertama kali setup, menginstal dependency, membuat `composer.lock` dan `APP_KEY` lokal.
 - Struktur modul awal `app/Modules/{Tenancy,Identity,Platform}` tanpa implementasi fitur M1.
 - Landing page dan endpoint `/health` untuk tes, PHPUnit smoke tests yang memeriksa PostgreSQL/Redis, GitHub Actions CI.
+- Central tenant directory/provisioning/lifecycle, invitation email + resend, activation tenant-bound, serta test concurrency/host smoke M1.
 - PRD Master, 2 PRD modul, ADR-001/002, ERD v1.1, `AGENTS.md`, dan `docs/DOCUMENT_INDEX.md`.
 - Contoh data tiga sekolah **sintetis** dalam JSON (belum dimasukkan ke database).
 
-**Tidak ada**: autentikasi, sesi tenant final, migrasi struktur M1, RBAC, billing, Livewire, domain tenant. Keputusan ini sengaja ditunda sesuai ADR-001/002 dan dokumen indeks.
+**Belum ada**: modul akademik M2+, billing, entitlement komersial, UI tenant sekolah, durable provisioning outbox, dan kesiapan production final. PRD/ADR/ERD aktif menjadi acuan; tidak ada data siswa nyata.
 
 ## 2. Prasyarat Windows
 
@@ -30,7 +31,7 @@ Buka PowerShell di folder yang memiliki `docker-compose.yml` dan `AGENTS.md`:
 .\scripts\setup.ps1
 ```
 
-Script akan membuat `.env` dari `.env.m0.example` jika belum ada, build PHP image, menjalankan database/Redis/Mailpit, mengambil skeleton Laravel resmi, menjalankan Composer, membuat application key, menjalankan `migrate` **tanpa tabel aplikasi**, lalu smoke tests M0.
+Script akan membuat `.env` dari `.env.m0.example` jika belum ada, build PHP image, menjalankan database/Redis/Mailpit, mengambil skeleton Laravel resmi bila diperlukan, menjalankan Composer, membuat application key, menjalankan migration dan seed katalog role/permission, lalu smoke tests M0.
 
 Jika kebijakan PowerShell melarang eksekusi skrip, jalankan perintah yang sama secara manual sesuai `docs/runbooks/M0_WINDOWS_SETUP.md` (tidak perlu mengubah kebijakan secara permanen).
 
