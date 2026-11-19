@@ -1,18 +1,18 @@
 # LMS SaaS Multi-Sekolah — Milestone M0 Starter
 
-**Status:** M1 development baseline; aplikasi belum siap produksi. PR4 telah diimplementasikan secara teknis pada branch `Milestone-1`, tetapi approval manusia PR4 dan hardening production masih terbuka.
+**Status:** M1 development baseline; aplikasi belum siap produksi. PR4 disetujui pengguna pada 18 November 2026; PR5 sedang dikerjakan dan hardening production masih terbuka.
 
 ## 1. Apa yang tersedia
 
 - Docker Compose: PHP 8.4 FPM, Nginx, PostgreSQL 17, Redis, queue worker, scheduler, Mailpit; Vite hanya dengan profile `assets`.
 - Skrip bootstrap yang mengambil **skeleton resmi `laravel/laravel:^13.0`** dari Packagist saat pertama kali setup, menginstal dependency, membuat `composer.lock` dan `APP_KEY` lokal.
-- Struktur modul awal `app/Modules/{Tenancy,Identity,Platform}` tanpa implementasi fitur M1.
+- Struktur modul `app/Modules/{Tenancy,Identity,Platform}` untuk implementasi M1.
 - Landing page dan endpoint `/health` untuk tes, PHPUnit smoke tests yang memeriksa PostgreSQL/Redis, GitHub Actions CI.
 - Central tenant directory/provisioning/lifecycle, invitation email + resend, activation tenant-bound, serta test concurrency/host smoke M1.
 - PRD Master, 2 PRD modul, ADR-001/002, ERD v1.1, `AGENTS.md`, dan `docs/DOCUMENT_INDEX.md`.
 - Contoh data tiga sekolah **sintetis** dalam JSON (belum dimasukkan ke database).
 
-**Belum ada**: modul akademik M2+, billing, entitlement komersial, UI tenant sekolah, durable provisioning outbox, dan kesiapan production final. PRD/ADR/ERD aktif menjadi acuan; tidak ada data siswa nyata.
+**Belum ada**: modul akademik M2+, billing, entitlement komersial, UI tenant sekolah yang lengkap, durable provisioning outbox, dan kesiapan production final. PRD/ADR/ERD aktif menjadi acuan; tidak ada data siswa nyata.
 
 ## 2. Prasyarat Windows
 
@@ -91,7 +91,28 @@ Workflow CI **memerlukan `composer.lock` yang sudah dilacak Git**; CI akan gagal
 
 ## 6. Arsitektur & aturan Codex
 
-`AGENTS.md` → `docs/DOCUMENT_INDEX.md` → PRD Master → ADR-001/002 → ERD v1.1 → PRD modul → kode dan tests. Jangan implementasikan M1 sebelum keputusan skema di-accept. `app/Modules` merupakan struktur yang diusulkan dalam ADR-002.
+`AGENTS.md` → `docs/DOCUMENT_INDEX.md` → PRD Master → ADR-001/002 → ERD v1.1 → PRD modul → kode dan tests. Keputusan baseline M1 sudah disetujui; perubahan schema atau arsitektur baru tetap mengikuti gate review. `app/Modules` adalah struktur yang dipilih ADR-002.
+
+### SOP undangan anggota dan pemulihan akun M1
+
+1. Admin sekolah masuk pada host sekolahnya dan membuka **Kelola undangan anggota**. Pilih akun baru tanpa email atau akun existing, isi username dan role sekolah.
+2. Verifikasi identitas penerima secara terpisah. Serahkan alamat host sekolah, ID, dan kode undangan hanya melalui kanal pribadi yang disepakati sekolah. Kode berlaku 72 jam, ditampilkan sekali, dan tidak boleh disimpan dalam log atau dikirim ke grup.
+3. Penerima membuka `/invitations/accept` pada host sekolah tersebut. Untuk akun baru penerima membuat password; untuk akun existing penerima memasukkan email terverifikasi dan password akunnya sendiri. Admin tidak meminta password penerima.
+4. Pengguna dengan email terverifikasi dapat membuka **Lupa password** pada host sekolah tempat ia mempunyai membership. Pesan yang tampil sama untuk alamat yang dapat dipulihkan maupun tidak. Token dikirim setelah commit, berlaku 30 menit, dan dikonsumsi sekali. Reset mencabut sesi lama secara server-side pada seluruh host melalui `users.auth_version`.
+5. Untuk siswa tanpa email, siswa membuka **Bantuan password siswa tanpa email** pada perangkat/sesi privat dengan HTTPS,
+   membuat permintaan dan menunjukkan hanya ID kepada admin. Admin membuka **Verifikasi pemulihan siswa**, memeriksa
+   identitas secara tatap muka sesuai SOP sekolah, dan menyetujui permintaan. Siswa membuat password pada sesi pribadinya;
+   admin tidak meminta atau melihat token maupun password. Jangan tutup/muat ulang halaman siswa sebelum selesai.
+   Rahasia dibuat browser dan tidak disimpan di server; hanya komitmen hash sementara di cache tenant-scoped dengan TTL.
+   Cache hilang, permintaan kedaluwarsa, atau sesi privat tertutup mengharuskan siswa memulai ulang.
+   Browser harus mendukung Web Crypto dalam secure context (HTTPS); HTTP hostname sekolah lokal tidak mencukupi.
+   Recovery ini hanya untuk siswa aktif tanpa email yang memiliki tepat satu membership historis dan bukan staff platform.
+
+Untuk lokal, Mailpit digunakan melalui SMTP; buka `http://localhost:8025` hanya untuk akun sintetis. Sebelum production, gunakan HTTPS dan transport email yang benar, tetapkan trusted proxy dengan benar, dan pastikan secret tidak masuk log. Transport `log`, `failover`, dan `roundrobin` tidak diperbolehkan untuk email recovery. Delivery setelah commit belum memiliki durable outbox; kegagalan dapat memerlukan permintaan ulang.
+
+Test otomatis dapat menghapus tabel pada **database test**. `tests/TestCase.php` mengunci dan memverifikasi nama database PostgreSQL `lms_saas_test` sebelum trait migrasi berjalan. Jangan mengubah atau melewati pengaman ini; jangan menyimpan data yang perlu dipertahankan di database test.
+
+Uji logika JavaScript form recovery secara terisolasi menggunakan Node.js: `node --test tests/Support/school_recovery_ui.test.js`. Uji ini tidak menggantikan pemeriksaan browser HTTPS.
 
 ## 7. Batas keandalan
 

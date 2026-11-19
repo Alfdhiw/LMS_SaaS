@@ -14,8 +14,8 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Artisan::command('m1:provision-concurrency {actorId} {slug} {idempotencyKey}', function (): int {
-    if (! app()->environment(['local', 'testing'])) {
-        $this->error('Perintah probe hanya boleh dijalankan di local/testing.');
+    if (! app()->environment('testing') || (DB::selectOne('select current_database() as name')->name ?? null) !== 'lms_saas_test') {
+        $this->error('Perintah probe hanya boleh dijalankan pada database test khusus.');
 
         return 1;
     }

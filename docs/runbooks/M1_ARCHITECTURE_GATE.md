@@ -75,7 +75,7 @@ PR4 implementation evidence:
   serta menolak archive sebelum checklist offboarding selesai.
 - Token invitation hanya tersedia pada environment local/testing dan tidak masuk audit metadata.
 
-Status: **technical review implemented; approval manusia PR4 belum dicatat**. PR5 belum dimulai.
+Status: **PR4 disetujui pengguna pada 2026-11-18** melalui percakapan.
 
 ## PR4 hardening follow-up evidence
 
@@ -89,6 +89,63 @@ Status: **technical review implemented; approval manusia PR4 belum dicatat**. PR
   `curl --resolve`, tanpa perlu mengubah Windows hosts file.
 - Test delivery/resend dan UI ditambahkan ke `M1ProvisioningTest`; seluruh data tetap sintetis.
 
-Status follow-up: **technical review implemented; approval manusia PR4 tetap belum dicatat**. PR5 belum dimulai.
+Status follow-up: **PR4 beserta tindak lanjutnya disetujui pengguna pada 2026-11-18**.
+
+Catatan operasional 2026-11-19: status migration lokal di atas merupakan bukti historis, bukan status saat ini.
+Ketika pengujian PR5 dijalankan, konfigurasi environment menyebabkan migration test menargetkan database lokal
+`lms_saas` dan menghapus tabel aplikasi; saat diperiksa hanya tabel `migrations` yang tersisa. Pemulihan belum
+dilakukan dan menunggu informasi backup atau persetujuan eksplisit pengguna untuk membuat ulang data dummy.
+Pengujian berikutnya diarahkan dan diverifikasi terhadap database khusus `lms_saas_test`.
+Pada 2026-11-19 pengguna mengizinkan pembuatan ulang database lokal. `php artisan migrate --force` dan
+`php artisan db:seed --force` dijalankan pada `lms_saas`: lima migration berstatus `Ran`, katalog berisi
+4 role dan 38 permission, dan terdapat 0 tenant serta 0 user. Ini membangun schema baru, **bukan** memulihkan
+data yang terhapus sebelumnya. Backup data lama belum ditemukan dalam folder proyek.
+
+```text
+PR4: [x] Approved — reviewer: user (chat approval) date: 2026-11-18
+Scope: provisioning, activation, lifecycle, invitation delivery dan hardening PR4.
+Next gate: review dan approval pengguna atas PR5 sebelum memulai PR6.
+```
+
+## PR5 — pekerjaan dalam proses
+
+- Role/status membership scoped ke host tenant, perubahan menaikkan membership auth version dan tercatat dalam audit;
+  penghapusan admin sekolah aktif terakhir dicegah.
+- Undangan akun baru tanpa email memakai token hash, TTL, dan aktivasi tenant-bound single-use.
+- School-assisted recovery dibatasi ke siswa tanpa email dengan satu membership historis dan tanpa akun platform;
+  konsumsi token menaikkan users auth version.
+- Pengaitan akun existing menggunakan undangan tenant-bound dan pembuktian kredensial global; membership baru dibuat
+  setelah verifikasi. Recovery email memakai alamat terverifikasi, token hash sekali pakai, dan pencabutan sesi global.
+- UI undangan offline dan prosedurnya tersedia di `README.md`.
+- Alur recovery berbantuan dua sesi telah disetujui pengguna pada 2026-11-19 dan diimplementasikan; token tetap
+  berada pada sesi siswa, bukan respons admin. Review dan approval PR5 masih menunggu pengguna; PR6 belum dimulai.
+- Pengujian akhir pada database khusus `lms_saas_test`: 64 test dan 412 assertion lulus, termasuk dua proses paralel
+  untuk recovery email, pengaitan akun existing, recovery sekolah, approval Redis, dan provisioning. Tiga uji
+  JavaScript terisolasi lulus. Pint lulus untuk 100 file; Composer valid.
+  Template `SelfRecoveryMail` juga dikirim langsung ke Mailpit lokal melalui SMTP menggunakan alamat dan tautan sintetis;
+  isi email dan tautan terverifikasi. Ini bukan uji alur HTTP penuh maupun delivery provider produksi. Verifikasi visual
+  dan end-to-end pada browser HTTPS serta pengiriman melalui provider produksi belum dilakukan.
+
+### Proposal kanal recovery tanpa email — disetujui untuk implementasi
+
+Pengguna menyetujui alur dua sesi pada 2026-11-19 melalui percakapan. Persetujuan ini tidak mengubah status Accepted
+ERD/ADR dan bukan approval PR5. Rancangan:
+
+1. Siswa menggunakan perangkat/sesi browser privat pada host sekolah untuk membuat permintaan pemulihan dan
+   menghasilkan rahasia acak di browsernya sendiri. Hanya ID permintaan non-rahasia yang ditunjukkan kepada admin.
+2. Admin berpermission memeriksa identitas siswa secara tatap muka sesuai SOP sekolah, memeriksa target permintaan
+   di tenant yang benar, lalu menyetujui permintaan tersebut. Respons dan tampilan admin tidak berisi rahasia/token siswa.
+3. Siswa tetap memakai sesi privatnya untuk menetapkan password. Server mengikat persetujuan dan pembuktian rahasia
+   pada permintaan, user, dan tenant; penggunaan hanya sekali, kedaluwarsa, dibatasi, diaudit, dan membatalkan sesi lama.
+4. Status permintaan tidak menyimpan `token_hash` sebelum verifikasi yang sah. Salah satu opsi teknis adalah menyimpan
+   komitmen hash sementara di cache tenant-scoped dengan TTL; kehilangan cache menyebabkan permintaan gagal aman dan
+   harus diulang. Detail atomicity, persaingan akses, retensi, batas percobaan, dan penanganan kegagalan wajib diuji.
+5. Kebijakan satu membership historis, bukan staff platform, dan kelayakan siswa diperiksa ulang saat persetujuan serta
+   konsumsi. Rahasia tidak masuk audit, URL, log, atau respons admin; produksi memerlukan HTTPS dan browser yang mendukung
+   cryptographic randomness. Prosedur juga harus menjelaskan perangkat privat, identifikasi, dan bantuan jika siswa
+   tidak memiliki perangkat yang memadai.
+
+Endpoint lama yang mengirim token kepada admin dihapus dari routing. Review keamanan, evidence test akhir, dan approval
+PR5 tetap diperlukan; persetujuan alur tidak otomatis menyetujui PR5.
 
 Setelah perubahan keputusan, update status di dokumen asli dan `docs/DOCUMENT_INDEX.md`; simpan riwayat, jangan hapus versi lama. Draft migration disesuaikan jika review mengubah schema.

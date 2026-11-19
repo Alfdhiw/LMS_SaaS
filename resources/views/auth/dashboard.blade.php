@@ -10,6 +10,12 @@
         <h1>{{ $title }}</h1>
         <p>{{ $subtitle }}</p>
         <p>Selamat datang, {{ $userName }}.</p>
+        @if ($manageMembers ?? false)
+            <p><a href="/members/manage">Kelola undangan anggota</a></p>
+        @endif
+        @if ($manageRecovery ?? false)
+            <p><a href="/members/recovery">Verifikasi pemulihan siswa</a></p>
+        @endif
 
         @if (! empty($recoveryCodes ?? []))
             <section>

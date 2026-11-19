@@ -9,6 +9,8 @@ use App\Modules\Identity\Services\PlatformPermissionChecker;
 use App\Modules\Tenancy\Services\TenantResolver;
 use App\Support\Auth\AuthSession;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Cache\RateLimiter;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -329,6 +331,16 @@ class M1AuthRbacTest extends TestCase
 
     public function test_logout_is_post_only_requires_csrf_and_invalidates_session(): void
     {
+        // Laravel normally bypasses CSRF in testing; exercise the real token check here.
+        $this->app->bind(PreventRequestForgery::class, function ($app) {
+            return new class($app, $app['encrypter']) extends PreventRequestForgery
+            {
+                protected function runningUnitTests()
+                {
+                    return false;
+                }
+            };
+        });
         $school = $this->tenantWithDomain('sekolah-a', 'sekolah-a.platform.test');
         $user = $this->user('Guru', 'Password!234');
         $membership = $this->membership($school, $user, 'guru01');
@@ -377,6 +389,103 @@ class M1AuthRbacTest extends TestCase
     public function test_unknown_host_cannot_fallback_to_login(): void
     {
         $this->get('http://unknown.platform.test/login')->assertNotFound();
+    }
+
+    public function test_membership_mutations_are_tenant_scoped_and_revoke_sessions(): void
+    {
+        $schoolA = $this->tenantWithDomain('member-a', 'member-a.platform.test');
+        $schoolB = $this->tenantWithDomain('member-b', 'member-b.platform.test');
+        $admin = $this->user('Admin Dummy', 'Password!234');
+        $adminMember = $this->membership($schoolA, $admin, 'admin');
+        $this->assignRole($schoolA, $adminMember, 'school_admin');
+        $target = $this->user('Guru Dummy', 'Password!234');
+        $targetA = $this->membership($schoolA, $target, 'guru');
+        $targetB = $this->membership($schoolB, $target, 'guru');
+        $this->assignRole($schoolA, $targetA, 'teacher');
+        $this->assignRole($schoolB, $targetB, 'teacher');
+        $outside = $this->user('Outside Dummy', 'Password!234');
+        $outsideMember = $this->membership($schoolB, $outside, 'outside');
+        $targetUlid = (string) DB::table('users')->where('id', $target)->value('public_ulid');
+        $outsideUlid = (string) DB::table('users')->where('id', $outside)->value('public_ulid');
+        $adminUlid = (string) DB::table('users')->where('id', $admin)->value('public_ulid');
+        $session = $this->tenantSession('member-a.platform.test', $schoolA, $adminMember, $admin);
+        $this->actingAs(User::query()->findOrFail($admin), 'web')->withSession($session);
+
+        $this->postWithCsrf('http://member-a.platform.test/members/'.$outsideUlid.'/status', ['status' => 'suspended'])->assertNotFound();
+        $this->assertDatabaseHas('tenant_memberships', ['id' => $outsideMember, 'status' => 'active', 'auth_version' => 1]);
+        $this->postWithCsrf('http://member-a.platform.test/members/'.$adminUlid.'/status', ['status' => 'suspended'])->assertSessionHasErrors('membership');
+        $this->postWithCsrf('http://member-a.platform.test/members/'.$targetUlid.'/roles', ['roles' => ['platform.tenants.create']])->assertSessionHasErrors('roles');
+        $this->postWithCsrf('http://member-a.platform.test/members/'.$targetUlid.'/roles', ['roles' => ['student']])->assertOk();
+        $this->postWithCsrf('http://member-a.platform.test/members/'.$targetUlid.'/status', ['status' => 'suspended'])->assertOk();
+        $this->assertDatabaseHas('tenant_memberships', ['id' => $targetA, 'status' => 'suspended', 'auth_version' => 3]);
+        $this->assertDatabaseHas('tenant_memberships', ['id' => $targetB, 'status' => 'active', 'auth_version' => 1]);
+        $this->assertDatabaseHas('tenant_audit_logs', ['tenant_id' => $schoolA, 'action' => 'membership.roles_changed']);
+        $this->assertDatabaseHas('tenant_audit_logs', ['tenant_id' => $schoolA, 'action' => 'membership.status_changed']);
+    }
+
+    public function test_assisted_recovery_rejects_historical_membership_and_is_host_bound_single_use(): void
+    {
+        config(['cache.limiter' => 'array']);
+        app()->forgetInstance(RateLimiter::class);
+        $schoolA = $this->tenantWithDomain('recover-a', 'recover-a.platform.test');
+        $schoolB = $this->tenantWithDomain('recover-b', 'recover-b.platform.test');
+        $admin = $this->user('Admin Dummy', 'Password!234');
+        $adminMember = $this->membership($schoolA, $admin, 'admin');
+        $this->assignRole($schoolA, $adminMember, 'school_admin');
+        $student = $this->user('Siswa Dummy', 'Password!234');
+        $studentMember = $this->membership($schoolA, $student, 'student');
+        $this->assignRole($schoolA, $studentMember, 'student');
+        $historical = $this->membership($schoolB, $student, 'student');
+        DB::table('tenant_memberships')->where('id', $historical)->update(['status' => 'left']);
+        $token = bin2hex(random_bytes(32));
+        $this->postWithCsrf('http://recover-a.platform.test/recovery/school-assisted/request', [
+            'username' => 'student', 'commitment' => hash('sha256', $token),
+        ])->assertOk();
+        $this->assertDatabaseMissing('account_recovery_requests', ['user_id' => $student]);
+
+        $single = $this->user('Siswa Single Dummy', 'Password!234');
+        $singleMember = $this->membership($schoolA, $single, 'single');
+        $this->assignRole($schoolA, $singleMember, 'student');
+        $issued = $this->postWithCsrf('http://recover-a.platform.test/recovery/school-assisted/request', [
+            'username' => 'single', 'commitment' => hash('sha256', $token),
+        ])->assertOk()->json('recovery_id');
+        $this->assertDatabaseHas('account_recovery_requests', ['public_ulid' => $issued, 'status' => 'requested', 'token_hash' => null]);
+        $session = $this->tenantSession('recover-a.platform.test', $schoolA, $adminMember, $admin);
+        $this->actingAs(User::query()->findOrFail($admin), 'web')->withSession($session);
+        $approved = $this->postWithCsrf('http://recover-a.platform.test/members/recovery/'.$issued.'/approve', [
+            'identity_verified_offline' => 'yes',
+        ])->assertOk();
+        $this->assertSame(['status' => 'approved'], $approved->json());
+        auth()->guard('web')->logout();
+        $payload = ['recovery_id' => $issued, 'token' => $token, 'password' => 'NewPassword!234', 'password_confirmation' => 'NewPassword!234'];
+        $this->postWithCsrf('http://recover-b.platform.test/recovery/school-assisted', $payload)->assertNotFound();
+        $this->postWithCsrf('http://recover-a.platform.test/recovery/school-assisted', $payload)->assertOk();
+        $this->postWithCsrf('http://recover-a.platform.test/recovery/school-assisted', $payload)->assertNotFound();
+        $this->assertDatabaseHas('users', ['id' => $single, 'auth_version' => 2]);
+        $this->assertTrue(Hash::check('NewPassword!234', (string) DB::table('users')->where('id', $single)->value('password')));
+        $this->assertDatabaseHas('tenant_audit_logs', ['tenant_id' => $schoolA, 'action' => 'recovery.school_assisted.consumed']);
+    }
+
+    public function test_member_invitation_is_tenant_bound_and_single_use(): void
+    {
+        $schoolA = $this->tenantWithDomain('invite-a', 'invite-a.platform.test');
+        $this->tenantWithDomain('invite-b', 'invite-b.platform.test');
+        $admin = $this->user('Admin Dummy', 'Password!234');
+        $adminMember = $this->membership($schoolA, $admin, 'admin');
+        $this->assignRole($schoolA, $adminMember, 'school_admin');
+        $this->actingAs(User::query()->findOrFail($admin), 'web')
+            ->withSession($this->tenantSession('invite-a.platform.test', $schoolA, $adminMember, $admin));
+
+        $issued = $this->postWithCsrf('http://invite-a.platform.test/members/invitations', [
+            'name' => 'Siswa Dummy', 'username' => 'student-new', 'role' => 'student',
+        ])->assertCreated()->json('data');
+        $payload = ['invitation_id' => $issued['invitation_id'], 'token' => $issued['token'], 'password' => 'NewPassword!234', 'password_confirmation' => 'NewPassword!234'];
+        $this->postWithCsrf('http://invite-b.platform.test/invitations/activate', $payload)->assertNotFound();
+        $this->postWithCsrf('http://invite-a.platform.test/invitations/activate', $payload)->assertOk();
+        $this->postWithCsrf('http://invite-a.platform.test/invitations/activate', $payload)->assertNotFound();
+        $this->assertDatabaseHas('account_invitations', ['public_ulid' => $issued['invitation_id'], 'status' => 'consumed']);
+        $this->assertDatabaseHas('tenant_memberships', ['tenant_id' => $schoolA, 'local_username_normalized' => 'student-new', 'status' => 'active']);
+        $this->assertDatabaseHas('tenant_audit_logs', ['tenant_id' => $schoolA, 'action' => 'membership.invitation.consumed']);
     }
 
     /**

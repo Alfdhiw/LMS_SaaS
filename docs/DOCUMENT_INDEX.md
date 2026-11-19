@@ -64,17 +64,24 @@ PR3 telah melalui technical review dan regression test pada branch `Milestone-1`
 
 Central MFA sudah tersedia untuk enrollment, challenge TOTP, serta reset/re-enrollment terkontrol yang diaudit melalui permission
 `platform.staff.mfa_reset`. Risiko produksi yang tersisa adalah verifikasi manual, HTTPS, session backend, backup secret terenkripsi,
-dan verifikasi manual multi-host. PR3 disetujui pengguna pada 2026-11-12; PR4 telah diimplementasikan dan menunggu review manusia.
+dan verifikasi manual multi-host. PR3 disetujui pengguna pada 2026-11-12; PR4 disetujui pengguna pada 2026-11-18.
 
 ## H. Evidence review PR4
 
 PR4 telah diimplementasikan pada branch `Milestone-1` setelah commit PR3. Cakupan meliputi provisioning tenant atomik,
 idempotency actor/key/payload, invitation bootstrap admin tenant-bound, activation host pending yang single-use,
 lifecycle transition dengan readiness check, platform permission middleware, dan negative security tests.
-Runbook operasional: `docs/runbooks/M1_PROVISIONING_RUNBOOK.md`. Approval manusia untuk PR4 belum dicatat; jangan
-melanjutkan ke PR5 sebelum review pengguna.
+Approval manusia untuk PR4 diberikan melalui percakapan pada 2026-11-18; pengguna mengizinkan pengerjaan PR5.
 
 Rekomendasi PR4 nomor 1-4 juga telah diimplementasikan sebagai hardening lanjutan: delivery email invitation dan resend
 tanpa reprovisioning, advisory lock dan test dua proses untuk concurrency idempotency, script HTTP host smoke dengan
 `curl --resolve`, serta UI Blade central untuk directory/detail/provisioning/lifecycle. Durable `provisioning_outbox`
 tetap ditunda karena merupakan perubahan schema/ERD tersendiri; delivery failure diaudit dan dapat diulang melalui resend.
+
+## I. Status PR5
+
+PR5 sedang dikerjakan. Role/status membership, undangan akun baru, join existing dengan undangan dan re-autentikasi,
+recovery mandiri melalui email terverifikasi, serta UI undangan offline tersedia untuk review. Pada 2026-11-19 pengguna
+menyetujui rancangan recovery siswa tanpa email dengan dua sesi privat dan verifikasi tatap muka: admin tidak menerima
+token siswa. Implementasi tersedia untuk review dan pengujian otomatis akhir lulus; verifikasi browser HTTPS masih
+terbuka. PR5 belum disetujui dan PR6 belum dimulai.

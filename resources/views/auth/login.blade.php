@@ -9,6 +9,7 @@
     <main>
         <h1>{{ $title }}</h1>
         <p>{{ $subtitle }}</p>
+        @if (session('status')) <p role="status">{{ session('status') }}</p> @endif
 
         @if (isset($error))
             <p role="alert">{{ $error }}</p>
@@ -28,6 +29,10 @@
 
             <button type="submit">Masuk</button>
         </form>
+        @if ($identifierName === 'username')
+            <p><a href="/password/forgot">Lupa password?</a> · <a href="/invitations/accept">Terima undangan sekolah</a></p>
+            <p><a href="/recovery/school-assisted">Bantuan password siswa tanpa email</a></p>
+        @endif
     </main>
 </body>
 </html>

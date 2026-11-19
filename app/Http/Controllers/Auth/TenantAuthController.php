@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Identity\Services\PermissionChecker;
 use App\Modules\Identity\Services\TenantAuthenticator;
 use App\Modules\Identity\Support\IdentityNormalizer;
 use App\Support\Audit\AuthAuditLogger;
@@ -92,6 +93,8 @@ final class TenantAuthController extends Controller
             'subtitle' => $context->tenantSlug,
             'userName' => $user?->name,
             'logoutAction' => url('/logout'),
+            'manageMembers' => $user !== null && app(PermissionChecker::class)->allows($user, $context, (int) $request->attributes->get('tenant_membership')->id, 'members.invite'),
+            'manageRecovery' => $user !== null && app(PermissionChecker::class)->allows($user, $context, (int) $request->attributes->get('tenant_membership')->id, 'members.assisted_reset'),
         ]);
     }
 
