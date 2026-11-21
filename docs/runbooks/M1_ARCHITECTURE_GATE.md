@@ -176,5 +176,59 @@ Next gate: review dan approval PR6 sebelum melanjutkan ke M2.
 
 Status: **implementasi tersedia untuk review; PR6 belum disetujui, dan M1 belum dinyatakan selesai atau siap produksi**.
 Tidak ada persetujuan otomatis untuk PR6 atau tahap berikutnya.
+Catatan: angka database dan pilot pada bagian PR6 di atas adalah bukti historis saat review itu ditulis; setelahnya
+pengguna membuat sekolah sintetis dan latihan backup/restore lokal telah dicatat di `README.md`.
+
+## Hardening audit PostgreSQL — rancangan disetujui, implementasi belum selesai
+
+Pada pemeriksaan lokal, koneksi aplikasi memakai `lms_user`; role tersebut adalah **superuser** dan pemilik kedua tabel
+audit. Karena itu `REVOKE` dari role tersebut tidak menghasilkan batas keamanan yang efektif. Tabel audit saat ini
+belum dijamin append-only di level hak PostgreSQL. Baseline ADR-001 mengarahkan role request non-superuser/non-owner;
+rancangan penerapan di bawah disetujui pengguna melalui percakapan pada 2026-11-21, tetapi **belum diterapkan** dan
+tidak mengubah status approval PR6.
+
+Rancangan yang disetujui pengguna:
+
+1. Pisahkan role runtime aplikasi/worker/scheduler dari role owner/migrasi. Runtime harus `NOSUPERUSER`, `NOBYPASSRLS`,
+   bukan owner schema/tabel dan tidak dapat menjadi anggota atau `SET ROLE` ke owner. Kredensial owner/migrasi tidak
+   tersedia di runtime normal; tentukan prosedur migrasi dan pengujian menggunakan kredensial terpisah yang aman.
+2. Untuk kedua tabel `platform_audit_logs` dan `tenant_audit_logs`, runtime hanya mendapat hak yang dibutuhkan untuk
+   membaca dan menambah audit beserta akses sequence; tidak mendapat `UPDATE`, `DELETE`, `TRUNCATE`, kepemilikan,
+   hak mengubah tabel/trigger, atau jalur grant turunan. Periksa pula grant ke `PUBLIC`, kepemilikan schema,
+   keanggotaan role, default privileges, migrasi berikutnya, serta hak minimum tabel lain yang memang dipakai aplikasi.
+3. Perubahan koneksi aplikasi/worker/scheduler perlu memisahkan konfigurasi runtime dari kredensial PostgreSQL bootstrap
+   di Docker; provisioning dan pergantian secret harus lokal, tidak dicetak, dan tidak disimpan di Git. Jaga database
+   test, volume, tenant dan data yang ada; lakukan preflight, backup yang diverifikasi, rollout dan rollback aman,
+   lalu uji app, migration/deploy, tenant isolation, backup/restore dan CI. Jangan mengganti role pada database lokal
+   atau menjalankan migration/DDL final sebelum rancangan disetujui dan bukti pengujian siap.
+4. Proteksi ini membatasi role runtime; superuser/owner masih dapat memodifikasi audit, dan role yang boleh `INSERT`
+   masih bisa memalsukan event. Ini bukan bukti anti-tamper absolut, tidak menggantikan RLS, kontrol akses baca,
+   perlindungan nilai sensitif metadata, retensi, pengawasan, atau rencana backup audit terpisah.
+
+**Bukti proof of concept, bukan hardening aplikasi:** `tests/Support/m1_audit_privilege_probe.sql` dijalankan pada
+`lms_saas_test` menggunakan transaksi yang di-rollback. Role percobaan non-login berhasil `SELECT`/`INSERT` dan
+ditolak saat `UPDATE`, `DELETE`, `TRUNCATE`, atau mengubah trigger pada kedua tabel. FK audit lintas tenant menolak
+membership tenant lain. Uji terhadap database `postgres` ditolak oleh guard. Role percobaan dan baris sintetis tidak
+tersisa. Percobaan awal memakai sequence di database test yang kosong sehingga nomor sequence maju meskipun transaksi
+di-rollback; script yang disimpan memakai ID eksplisit dan uji ulang membuktikan sequence tidak berubah. Database
+aplikasi tidak menjadi target dan role runtime aktual belum dibatasi.
+
+**Persiapan penerapan:** backup lokal baru diverifikasi dengan checksum. Skrip
+`database/security/m1_audit_runtime_grants.sql` dan template `docker/compose.audit-local.override.yml` disiapkan;
+`tests/Support/m1_audit_runtime_grants_test.ps1` menguji grant dengan role sintetis pada `lms_saas_test` dan rollback.
+Uji positif `SELECT`/`INSERT`, penolakan `UPDATE`/`DELETE`/`TRUNCATE`/`ALTER`, akses sequence, dan penolakan pembuatan
+objek schema lulus. Guard menolak target `postgres`. Template Docker lulus `config --quiet` tanpa diterapkan.
+Skrip grant saat ini memberikan DML untuk tabel aplikasi non-audit yang sudah ada dan bukan bukti least-privilege
+per modul; tidak ada default grant untuk tabel baru, sehingga proses deployment harus memperbarui dan menguji grant
+setelah migration sebelum dialihkan ke runtime.
+Pemeriksaan keamanan alat menolak langkah pemindahan kredensial owner karena berpotensi menampilkan password dalam
+output; kredensial belum dipindahkan, role runtime belum dibuat, grant belum diterapkan, `.env` dan koneksi aplikasi
+belum diubah. Pemilik harus menyiapkan kredensial secara privat tanpa memberikannya melalui chat sebelum rollout
+diteruskan. File sementara backup di container dibersihkan setelah salinan Windows diverifikasi.
+
+```text
+Audit database hardening design: [x] Approved — reviewer: user (chat approval), date: 2026-11-21
+Implementation: incomplete — role runtime dan konfigurasi koneksi belum diterapkan.
+```
 
 Setelah perubahan keputusan, update status di dokumen asli dan `docs/DOCUMENT_INDEX.md`; simpan riwayat, jangan hapus versi lama. Draft migration disesuaikan jika review mengubah schema.

@@ -1,6 +1,7 @@
 /.env
 /.env.*
 !/.env.m0.example
+/docker-compose.override.yml
 /vendor/
 /node_modules/
 /public/build/

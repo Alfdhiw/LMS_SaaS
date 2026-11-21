@@ -1,0 +1,14 @@
+# Optional LOCAL override. Copy to docker-compose.override.yml only after the
+# owner secret has been moved outside the application bind mount.
+services:
+  db:
+    environment:
+      POSTGRES_USER: lms_user
+      POSTGRES_PASSWORD: null
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_owner_password
+    secrets:
+      - postgres_owner_password
+
+secrets:
+  postgres_owner_password:
+    file: ../.lms-saas-secrets/postgres_owner_password

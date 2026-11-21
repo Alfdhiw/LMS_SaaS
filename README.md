@@ -114,6 +114,22 @@ Test otomatis dapat menghapus tabel pada **database test**. `tests/TestCase.php`
 
 Uji logika JavaScript form recovery secara terisolasi menggunakan Node.js: `node --test tests/Support/school_recovery_ui.test.js`. Uji ini tidak menggantikan pemeriksaan browser HTTPS.
 
+Proof of concept hak audit PostgreSQL dapat dijalankan pada `lms_saas_test` saja:
+
+```powershell
+Get-Content -Raw -Encoding UTF8 tests/Support/m1_audit_privilege_probe.sql | docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -U lms_user -d lms_saas_test
+```
+
+Script memakai role dan data sintetis dalam transaksi yang di-rollback; memerlukan operator test yang dapat membuat role
+dan akan menolak database lain. Ini hanya menguji rancangan hak, **bukan** bukti bahwa role aplikasi saat ini sudah
+terlindungi. Usulan pemisahan role dan status review dicatat di `docs/runbooks/M1_ARCHITECTURE_GATE.md`.
+
+Rancangan pemisahan role telah disetujui, tetapi rollout lokal **belum selesai**: aplikasi masih menggunakan role
+owner/superuser. Skrip `database/security/m1_audit_runtime_grants.sql` baru diuji melalui transaksi rollback di
+database test. Uji ulang menggunakan `./tests/Support/m1_audit_runtime_grants_test.ps1`; jangan menerapkan grant atau
+template `docker/compose.audit-local.override.yml` ke lingkungan aktif sampai kredensial operator terpisah, jalur
+migration/test, dan langkah rollout/rollback siap serta telah diverifikasi.
+
 ### Runbook pilot M1 — belum siap data nyata
 
 Jangan gunakan data siswa nyata atau menandai pilot siap produksi sebelum gate berikut ditinjau dan disetujui.
