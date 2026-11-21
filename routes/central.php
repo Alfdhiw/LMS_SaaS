@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\Auth\CentralAuthController;
 use App\Http\Controllers\Auth\CentralMfaController;
+use App\Http\Controllers\Platform\PlatformAuditController;
 use App\Http\Controllers\Platform\TenantLifecycleController;
+use App\Http\Controllers\Platform\TenantMetadataController;
 use App\Http\Controllers\Platform\TenantProvisioningController;
 use App\Http\Middleware\EnsureCentralSession;
 use App\Http\Middleware\RequireCentralHost;
@@ -22,6 +24,9 @@ Route::domain((string) config('saas.central_host'))
         });
 
         Route::middleware(EnsureCentralSession::class)->group(function (): void {
+            Route::get('/audit', [PlatformAuditController::class, 'index'])
+                ->middleware('central.permission:platform.audit.view')
+                ->name('central.audit.index');
             Route::get('/tenants', [TenantProvisioningController::class, 'index'])
                 ->middleware('central.permission:platform.tenants.view')
                 ->name('central.tenants.index');
@@ -31,6 +36,9 @@ Route::domain((string) config('saas.central_host'))
             Route::get('/tenants/{publicUlid}', [TenantProvisioningController::class, 'show'])
                 ->middleware('central.permission:platform.tenants.view')
                 ->name('central.tenants.show');
+            Route::patch('/tenants/{publicUlid}', [TenantMetadataController::class, 'update'])
+                ->middleware('central.permission:platform.tenants.update')
+                ->name('central.tenants.update');
             Route::post('/tenants/{publicUlid}/invitation/resend', [TenantProvisioningController::class, 'resend'])
                 ->middleware('central.permission:platform.tenants.update')
                 ->name('central.tenants.invitation.resend');

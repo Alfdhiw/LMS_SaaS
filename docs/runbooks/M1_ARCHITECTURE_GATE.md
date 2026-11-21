@@ -107,7 +107,7 @@ Scope: provisioning, activation, lifecycle, invitation delivery dan hardening PR
 Next gate: review dan approval pengguna atas PR5 sebelum memulai PR6.
 ```
 
-## PR5 — pekerjaan dalam proses
+## PR5 — review dan approval
 
 - Role/status membership scoped ke host tenant, perubahan menaikkan membership auth version dan tercatat dalam audit;
   penghapusan admin sekolah aktif terakhir dicegah.
@@ -118,7 +118,7 @@ Next gate: review dan approval pengguna atas PR5 sebelum memulai PR6.
   setelah verifikasi. Recovery email memakai alamat terverifikasi, token hash sekali pakai, dan pencabutan sesi global.
 - UI undangan offline dan prosedurnya tersedia di `README.md`.
 - Alur recovery berbantuan dua sesi telah disetujui pengguna pada 2026-11-19 dan diimplementasikan; token tetap
-  berada pada sesi siswa, bukan respons admin. Review dan approval PR5 masih menunggu pengguna; PR6 belum dimulai.
+  berada pada sesi siswa, bukan respons admin. PR5 disetujui pengguna pada 2026-11-21 melalui percakapan.
 - Pengujian akhir pada database khusus `lms_saas_test`: 64 test dan 412 assertion lulus, termasuk dua proses paralel
   untuk recovery email, pengaitan akun existing, recovery sekolah, approval Redis, dan provisioning. Tiga uji
   JavaScript terisolasi lulus. Pint lulus untuk 100 file; Composer valid.
@@ -145,7 +145,36 @@ ERD/ADR dan bukan approval PR5. Rancangan:
    cryptographic randomness. Prosedur juga harus menjelaskan perangkat privat, identifikasi, dan bantuan jika siswa
    tidak memiliki perangkat yang memadai.
 
-Endpoint lama yang mengirim token kepada admin dihapus dari routing. Review keamanan, evidence test akhir, dan approval
-PR5 tetap diperlukan; persetujuan alur tidak otomatis menyetujui PR5.
+Endpoint lama yang mengirim token kepada admin dihapus dari routing. Pengguna menyetujui PR5 dan mengizinkan PR6 pada
+2026-11-21 melalui percakapan. Persetujuan ini tidak menutup risiko produksi atau menggantikan verifikasi browser HTTPS.
+
+```text
+PR5: [x] Approved — reviewer: user (chat approval) date: 2026-11-21
+Scope: membership, invitation, account linking, recovery, audit dan hardening PR5.
+Next gate: review dan approval PR6 sebelum melanjutkan ke M2.
+```
+
+## PR6 — bukti implementasi untuk review
+
+- Dashboard central menampilkan agregat tenant, onboarding dan kegagalan provisioning yang disaring; directory
+  mendukung pencarian, filter, pagination, dan status undangan. Pembaruan nama/timezone memeriksa permission,
+  dikunci dalam transaksi dan diaudit; slug, host dan status tidak dapat diubah melalui operasi tersebut.
+- Viewer audit memakai permission platform dan hanya menampilkan field yang dipilih, tanpa metadata audit atau
+  identifier sensitif. Filter hasil hanya mengklasifikasikan action dengan suffix yang dikenali; lainnya `other`.
+  Penulisan audit menolak key metadata sensitif termasuk yang bersarang, tetapi belum menjamin bahwa nilai dengan
+  key lain tidak mengandung rahasia maupun menjamin append-only di level database.
+- Full suite final pada database khusus `lms_saas_test`: **75 test, 513 assertion lulus**; termasuk isolasi host
+  untuk tiga tenant sintetis dan central, negative test permission, serta uji dua proses untuk aktivasi dan suspend.
+  `M1PlatformDashboardTest`: 9 test, 86 assertion lulus. Test JavaScript recovery: 3 lulus. `pint --test`: 108 file
+  lulus; `composer validate --no-check-publish`: valid. HTTP smoke lokal: login central 200, unknown host 404.
+- Pemeriksaan read-only `lms_saas` setelah pengujian menunjukkan 5 migration, 0 tenant, 0 user. Tidak ada migration
+  baru, perubahan konfigurasi Docker, atau data siswa nyata. Catatan kehilangan data historis PR5 di atas tetap berlaku.
+- Runbook pilot dan gate operasional tersedia pada `README.md`. Browser automation tidak tersedia di environment
+  ini (`missing field sandboxPolicy`); verifikasi visual/HTTPS dan smoke manual dengan tiga sekolah sintetis pada
+  empat host belum dilakukan. Akun platform dan tenant demo belum dibuat di database utama. Bukti GitHub Actions
+  terbaru, latihan backup/restore, kebijakan audit append-only/retensi, dan keputusan RLS/outbox masih terbuka.
+
+Status: **implementasi tersedia untuk review; PR6 belum disetujui, dan M1 belum dinyatakan selesai atau siap produksi**.
+Tidak ada persetujuan otomatis untuk PR6 atau tahap berikutnya.
 
 Setelah perubahan keputusan, update status di dokumen asli dan `docs/DOCUMENT_INDEX.md`; simpan riwayat, jangan hapus versi lama. Draft migration disesuaikan jika review mengubah schema.

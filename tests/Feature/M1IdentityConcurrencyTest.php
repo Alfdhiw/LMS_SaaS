@@ -98,7 +98,51 @@ final class M1IdentityConcurrencyTest extends TestCase
         $this->assertNull(Cache::store('redis')->get('tenant:'.$tenant.':school-recovery:'.$id));
     }
 
-    private function race(string $table, int $id, array $payload): void
+    public function test_parallel_tenant_suspensions_apply_only_one_transition_and_audit(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        [$tenant, $host] = $this->tenant();
+        $actor = $this->user('race-platform-operator@example.test');
+        DB::table('platform_staff')->insert(['user_id' => $actor, 'role' => 'super_admin', 'status' => 'active']);
+        $tenantUlid = (string) DB::table('tenants')->where('id', $tenant)->value('public_ulid');
+        $this->race('tenants', $tenant, [
+            'action' => 'suspend', 'host' => $host, 'id' => $tenantUlid, 'actor' => $actor,
+        ], 'rejected:409');
+        $this->assertSame('suspended', DB::table('tenants')->where('id', $tenant)->value('status'));
+        $this->assertSame(1, DB::table('platform_audit_logs')->where('tenant_id', $tenant)->where('action', 'tenant.transitioned')->count());
+    }
+
+    public function test_parallel_bootstrap_activation_consumes_invitation_once(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        [$tenant, $host] = $this->tenant();
+        DB::table('tenants')->where('id', $tenant)->update(['status' => 'pending']);
+        $operator = $this->user('race-bootstrap-operator@example.test');
+        DB::table('platform_staff')->insert(['user_id' => $operator, 'role' => 'super_admin', 'status' => 'active']);
+        $user = $this->user('race-bootstrap-admin@example.test');
+        DB::table('users')->where('id', $user)->update(['status' => 'pending', 'password' => null, 'email_verified_at' => null]);
+        $membership = $this->member($tenant, $user, 'admin', 'school_admin');
+        DB::table('tenant_memberships')->where('id', $membership)->update(['status' => 'invited']);
+        DB::table('tenant_settings')->insert(['tenant_id' => $tenant, 'onboarding_json' => '{}']);
+        $publicId = (string) Str::ulid();
+        $token = bin2hex(random_bytes(32));
+        $invitation = (int) DB::table('account_invitations')->insertGetId([
+            'public_ulid' => $publicId, 'tenant_id' => $tenant, 'membership_id' => $membership,
+            'target_user_id' => $user, 'purpose' => 'bootstrap_admin', 'status' => 'pending',
+            'token_hash' => hash('sha256', $token), 'expires_at' => now()->addHours(1),
+            'created_by_platform_user_id' => $operator,
+        ]);
+        $this->race('account_invitations', $invitation, [
+            'action' => 'bootstrap-activate', 'host' => $host, 'id' => $publicId, 'token' => $token,
+        ]);
+        $this->assertDatabaseHas('account_invitations', ['id' => $invitation, 'status' => 'consumed']);
+        $this->assertDatabaseHas('tenant_memberships', ['id' => $membership, 'status' => 'active']);
+        $this->assertDatabaseHas('users', ['id' => $user, 'status' => 'active']);
+        $this->assertSame(1, DB::table('tenant_audit_logs')->where('tenant_id', $tenant)->where('action', 'tenant.admin_activated')->count());
+        $this->assertSame(1, DB::table('platform_audit_logs')->where('tenant_id', $tenant)->where('action', 'tenant.admin_activated')->count());
+    }
+
+    private function race(string $table, int $id, array $payload, string $rejectedOutcome = 'rejected:404'): void
     {
         $db = config('database.connections.pgsql');
         $env = [
@@ -141,7 +185,7 @@ final class M1IdentityConcurrencyTest extends TestCase
             $outcomes[] = trim($worker->getOutput());
         }
         sort($outcomes);
-        $this->assertSame(['consumed', 'rejected:404'], $outcomes);
+        $this->assertSame(['consumed', $rejectedOutcome], $outcomes);
     }
 
     private function tenant(): array

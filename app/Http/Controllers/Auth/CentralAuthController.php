@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Identity\Services\CentralAuthenticator;
 use App\Modules\Identity\Services\CentralMfaService;
 use App\Modules\Identity\Support\IdentityNormalizer;
+use App\Modules\Platform\Services\PlatformDashboardService;
 use App\Support\Audit\AuthAuditLogger;
 use App\Support\Auth\AuthSessionManager;
 use App\Support\Auth\LoginRateLimiter;
@@ -23,6 +24,7 @@ final class CentralAuthController extends Controller
         private readonly LoginRateLimiter $rateLimiter,
         private readonly AuthSessionManager $sessionManager,
         private readonly AuthAuditLogger $auditLogger,
+        private readonly PlatformDashboardService $dashboardService,
     ) {}
 
     public function showLogin(): Response
@@ -99,13 +101,14 @@ final class CentralAuthController extends Controller
     {
         $user = $request->attributes->get('central_user');
 
-        return response()->view('auth.dashboard', [
+        return response()->view('platform.dashboard', [
             'title' => 'Dashboard Platform',
             'subtitle' => 'Portal pusat SaaS',
             'userName' => $user?->name,
             'logoutAction' => route('central.logout'),
             'recoveryCodes' => $this->recoveryCodes($request),
-        ]);
+            'summary' => $this->dashboardService->summary(),
+        ])->header('Cache-Control', 'no-store');
     }
 
     public function logout(Request $request): Response

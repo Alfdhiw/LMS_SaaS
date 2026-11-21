@@ -18,6 +18,7 @@
         label { display: block; font-weight: 650; margin-top: .85rem; }
         input, select, button { font: inherit; }
         input { width: 100%; border: 1px solid #b9c5d8; border-radius: 8px; padding: .65rem .7rem; margin-top: .35rem; }
+        input[type=checkbox] { width: auto; margin-right: .35rem; }
         button, .button { display: inline-block; border: 0; border-radius: 8px; padding: .62rem .85rem; background: #2563eb; color: #fff; cursor: pointer; text-decoration: none; }
         button.secondary, .button.secondary { background: #475569; }
         button.danger { background: #b42318; }
@@ -44,7 +45,17 @@
 <header>
     <strong>LMS SaaS · Central</strong>
     <nav>
-        <a href="{{ route('central.tenants.index') }}">Tenant directory</a>
+        @php
+            $centralUser = request()->attributes->get('central_user');
+            $platformPermissions = app(\App\Modules\Identity\Services\PlatformPermissionChecker::class);
+        @endphp
+        @if ($centralUser && $platformPermissions->allows($centralUser, 'platform.tenants.view'))
+            <a href="{{ route('central.dashboard') }}">Dashboard</a>
+            <a href="{{ route('central.tenants.index') }}">Tenant directory</a>
+        @endif
+        @if ($centralUser && $platformPermissions->allows($centralUser, 'platform.audit.view'))
+            <a href="{{ route('central.audit.index') }}">Audit platform</a>
+        @endif
         <form class="inline" method="POST" action="{{ route('central.logout') }}">
             @csrf
             <button class="secondary" type="submit">Keluar</button>

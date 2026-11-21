@@ -1,9 +1,12 @@
 <?php
 
 use App\Models\User;
+use App\Modules\Identity\Services\BootstrapAdminActivationService;
 use App\Modules\Identity\Services\ExistingAccountInvitationService;
 use App\Modules\Identity\Services\SchoolAssistedRecoveryService;
 use App\Modules\Identity\Services\SelfEmailRecoveryService;
+use App\Modules\Platform\Services\PlatformOperationException;
+use App\Modules\Platform\Services\TenantLifecycleService;
 use App\Modules\Tenancy\Services\TenantResolver;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Http\Request;
@@ -27,7 +30,10 @@ if ((DB::selectOne('select current_database() as name')->name ?? null) !== 'lms_
 
 $input = json_decode(stream_get_contents(STDIN), true, 512, JSON_THROW_ON_ERROR);
 DB::statement("SET application_name = 'm1_pr5_identity_race'");
-$context = $app->make(TenantResolver::class)->resolve($input['host']);
+$resolver = $app->make(TenantResolver::class);
+$context = $input['action'] === 'bootstrap-activate'
+    ? $resolver->resolveForActivation($input['host'])
+    : $resolver->resolve($input['host']);
 if ($context === null) {
     exit(3);
 }
@@ -46,12 +52,24 @@ try {
     } elseif ($input['action'] === 'join') {
         $app->make(ExistingAccountInvitationService::class)
             ->accept($request, $context, $input['id'], $input['token'], $input['email'], 'ValidPassword!234');
+    } elseif ($input['action'] === 'suspend') {
+        $app->make(TenantLifecycleService::class)
+            ->transition($request, User::query()->findOrFail($input['actor']), $input['id'], 'suspend', 'active', 'concurrency_test');
+    } elseif ($input['action'] === 'bootstrap-activate') {
+        $activated = $app->make(BootstrapAdminActivationService::class)
+            ->activate($request, $context, $input['id'], $input['token'], 'ChangedPassword!234');
+        if (! $activated) {
+            echo 'rejected:404';
+            exit(0);
+        }
     } else {
         exit(4);
     }
     echo 'consumed';
 } catch (HttpExceptionInterface $exception) {
     echo 'rejected:'.$exception->getStatusCode();
+} catch (PlatformOperationException $exception) {
+    echo 'rejected:'.$exception->statusCode;
 } catch (Throwable $exception) {
     fwrite(STDERR, get_class($exception));
     exit(1);

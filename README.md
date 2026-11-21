@@ -1,6 +1,6 @@
 # LMS SaaS Multi-Sekolah — Milestone M0 Starter
 
-**Status:** M1 development baseline; aplikasi belum siap produksi. PR4 disetujui pengguna pada 18 November 2026; PR5 sedang dikerjakan dan hardening production masih terbuka.
+**Status:** M1 development baseline; aplikasi belum siap produksi. PR5 disetujui pengguna pada 21 November 2026; implementasi PR6 tersedia untuk review, belum disetujui, dan gate production masih terbuka.
 
 ## 1. Apa yang tersedia
 
@@ -114,8 +114,45 @@ Test otomatis dapat menghapus tabel pada **database test**. `tests/TestCase.php`
 
 Uji logika JavaScript form recovery secara terisolasi menggunakan Node.js: `node --test tests/Support/school_recovery_ui.test.js`. Uji ini tidak menggantikan pemeriksaan browser HTTPS.
 
+### Runbook pilot M1 — belum siap data nyata
+
+Jangan gunakan data siswa nyata atau menandai pilot siap produksi sebelum gate berikut ditinjau dan disetujui.
+Verifikasi browser, GitHub Actions, backup/restore, dan risiko produksi harus memiliki bukti aktual; status lulus test
+lokal bukan bukti bahwa seluruh gate tersebut selesai.
+
+1. **Persiapan:** pastikan host pusat terdaftar secara eksplisit, tenant ditentukan dari hostname terverifikasi,
+   cookie host-only, dan HTTPS/trusted proxy/session backend telah direview. Untuk produksi operator harus memakai MFA;
+   ikuti `docs/runbooks/M1_CENTRAL_MFA_RUNBOOK.md`. Jangan menyalin secret atau kode MFA ke log/tiket.
+2. **Data & backup:** gunakan hanya akun dan sekolah sintetis untuk latihan. Pastikan backup yang dapat dipulihkan,
+   enkripsi, retensi, hak akses, serta uji restore di lingkungan terisolasi telah disetujui sebelum data nyata.
+   Jangan menjalankan `migrate:fresh`, `migrate:rollback`, atau `docker compose down -v` pada database/volume
+   yang datanya perlu disimpan. Pengujian otomatis hanya boleh memakai database khusus `lms_saas_test`.
+3. **Demonstrasi empat host:** dengan operator pusat sintetis yang tersedia, buat tiga sekolah sintetis melalui
+   direktori central. Aktivasi admin dan tenant sesuai readiness; jangan memasukkan email/identitas nyata. Pada masing-masing
+   host sekolah, verifikasi login tenant; pada central, periksa total/status dan pastikan audit tidak berisi token.
+   Jika belum ada operator sintetis, hentikan demo dan siapkan prosedur bootstrap terpisah yang disetujui.
+4. **Host smoke lokal:** setelah tiga tenant sintetis aktif, jalankan:
+
+   ```powershell
+   .\scripts\m1-host-smoke.ps1 -TenantHosts @('sekolah-a.platform.test','sekolah-b.platform.test','sekolah-c.platform.test')
+   ```
+
+   Gunakan nama host yang benar-benar terdaftar. Script memeriksa central, unknown host, loopback, dan hingga tiga
+   host tenant; hasil tanpa tiga tenant aktif **bukan** bukti demo empat host lengkap.
+5. **Verifikasi & respons:** jalankan test PostgreSQL khusus, Pint, dan uji JavaScript sesuai bagian sebelumnya.
+   Tinjau dashboard serta `/audit` dengan permission platform yang benar; pastikan admin sekolah tidak dapat membuka
+   central dan host lain tidak mendapat akses. Jangan memasukkan secret ke bukti. Saat ada indikasi kebocoran atau
+   gangguan, hentikan akses terdampak sesuai SOP insiden, pertahankan bukti, dan libatkan pemilik sistem; jangan
+   menghapus volume sebagai langkah diagnosis.
+6. **Gate masih terbuka:** keputusan RLS atau kontrol alternatif dan uji pool/worker, durable outbox/retry, backup
+   restore, perlindungan data/retensi, MFA dan prosedur recovery, observability/redaction, serta uji beban/staging.
+   Audit viewer hanya menampilkan field aman; penolakan nama field sensitif bukan jaminan mendeteksi secret yang
+   disisipkan dalam nilai bebas. Audit append-only tingkat hak database dan retensi harus diputuskan sebelum produksi.
+
 ## 7. Batas keandalan
 
-Artefak ZIP ini telah diperiksa secara statis, tetapi lingkungan penyiapan artefak **tidak memiliki Docker dan tidak dapat mengambil paket Composer**, sehingga proses build/boot belum diuji end-to-end di lingkungan tersebut. Gunakan skrip verifikasi setelah diekstrak; laporkan log jika ada error.
+Hasil test hanya berlaku untuk environment dan waktu saat test dijalankan. M1 belum boleh dianggap siap produksi atau
+pilot berdata nyata hanya karena Docker lokal dan test otomatis berjalan. Review PR6, uji browser HTTPS, bukti CI,
+backup/restore, dan gate keamanan/operasional di runbook pilot tetap diperlukan.
 
 Lihat `docs/runbooks/M0_WINDOWS_SETUP.md` dan `docs/runbooks/M0_ACCEPTANCE_CHECKLIST.md`.

@@ -60,9 +60,25 @@ final class AuthAuditLogger
 
     private function metadata(array $metadata): string
     {
+        $this->rejectSensitiveKeys($metadata);
+
         return json_encode(
             $metadata === [] ? new \stdClass : $metadata,
             JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES,
         );
+    }
+
+    private function rejectSensitiveKeys(array $metadata): void
+    {
+        foreach ($metadata as $key => $value) {
+            if (is_string($key) && preg_match('/password|passwd|token|secret|authorization|cookie|session|credential|recovery.?code|api.?key|private.?key|email/i', $key) === 1) {
+                throw new \InvalidArgumentException('Sensitive audit metadata field is not allowed.');
+            }
+            if (is_array($value)) {
+                $this->rejectSensitiveKeys($value);
+            } elseif (is_object($value)) {
+                throw new \InvalidArgumentException('Audit metadata values must not contain objects.');
+            }
+        }
     }
 }

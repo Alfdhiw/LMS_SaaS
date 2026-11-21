@@ -25,16 +25,24 @@ final class TenantProvisioningController extends Controller
 
     public function index(Request $request): Response
     {
-        $tenants = $this->directory->all();
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'status' => ['nullable', 'in:pending,active,suspended,archived'],
+            'page' => ['nullable', 'integer', 'min:1', 'max:10000'],
+        ]);
+        $tenants = $this->directory->all($filters);
 
         if (! $request->expectsJson()) {
             return response()->view('platform.tenants.index', [
                 'tenants' => $tenants,
+                'filters' => $filters,
                 'idempotencyKey' => (string) Str::uuid(),
             ]);
         }
 
-        return response()->json(['data' => $tenants]);
+        return response()->json(['data' => $tenants->items(), 'meta' => [
+            'current_page' => $tenants->currentPage(), 'last_page' => $tenants->lastPage(), 'total' => $tenants->total(),
+        ]]);
     }
 
     public function show(Request $request, string $publicUlid): Response

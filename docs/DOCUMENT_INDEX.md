@@ -80,8 +80,9 @@ tetap ditunda karena merupakan perubahan schema/ERD tersendiri; delivery failure
 
 ## I. Status PR5
 
-PR5 sedang dikerjakan. Role/status membership, undangan akun baru, join existing dengan undangan dan re-autentikasi,
+PR5 telah disetujui. Role/status membership, undangan akun baru, join existing dengan undangan dan re-autentikasi,
 recovery mandiri melalui email terverifikasi, serta UI undangan offline tersedia untuk review. Pada 2026-11-19 pengguna
 menyetujui rancangan recovery siswa tanpa email dengan dua sesi privat dan verifikasi tatap muka: admin tidak menerima
-token siswa. Implementasi tersedia untuk review dan pengujian otomatis akhir lulus; verifikasi browser HTTPS masih
-terbuka. PR5 belum disetujui dan PR6 belum dimulai.
+token siswa. Pengguna menyetujui PR5 dan mengizinkan PR6 pada 2026-11-21. Pengujian otomatis akhir PR5 lulus;
+verifikasi browser HTTPS masih terbuka. Implementasi PR6 tersedia untuk review dan belum disetujui; bukti test dan
+gate yang masih terbuka dicatat di `docs/runbooks/M1_ARCHITECTURE_GATE.md`.
