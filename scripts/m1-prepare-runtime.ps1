@@ -6,6 +6,7 @@ $ownerSecret = Join-Path $secretRoot 'postgres_owner_password'
 $runtimeSecret = Join-Path $secretRoot 'postgres_runtime_password'
 $provisionScript = Join-Path $projectRoot 'scripts/m1-provision-runtime.sh'
 $grantScript = Join-Path $projectRoot 'database/security/m1_audit_runtime_grants.sql'
+$checkScript = Join-Path $projectRoot 'scripts/m1-runtime-role-check.sh'
 
 if (-not (Test-Path -LiteralPath $ownerSecret -PathType Leaf) -or (Test-Path -LiteralPath $runtimeSecret)) {
     throw 'Owner secret tidak ada atau runtime secret sudah ada; provisioning dibatalkan.'
@@ -38,7 +39,10 @@ foreach ($rule in $secretAcl.Access) {
     }
 }
 
-$runtimeExists = docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -U lms_user -d lms_saas -tAc "SELECT count(*) FROM pg_roles WHERE rolname='lms_runtime'"
+$runtimeExists = docker run --rm --network lms-saas-local_default `
+    --mount "type=bind,src=$ownerSecret,dst=/run/secrets/postgres_owner_password,readonly" `
+    --mount "type=bind,src=$checkScript,dst=/run/m1-runtime-role-check.sh,readonly" `
+    --entrypoint sh postgres:17-alpine /run/m1-runtime-role-check.sh
 if ($LASTEXITCODE -ne 0 -or ($runtimeExists | Out-String).Trim() -ne '0') {
     throw 'Role runtime sudah ada atau pemeriksaan PostgreSQL gagal; provisioning dibatalkan.'
 }

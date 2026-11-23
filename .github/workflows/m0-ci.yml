@@ -7,6 +7,8 @@ jobs:
   private-database-helper:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Pull PostgreSQL for isolated test
@@ -14,6 +16,9 @@ jobs:
       - name: Test private database helper with synthetic data
         shell: pwsh
         run: ./tests/Support/m1-private-database-test.ps1
+      - name: Test SCRAM operators and rollback with synthetic data
+        shell: pwsh
+        run: ./tests/Support/m1-scram-synthetic-test.ps1
 
   smoke:
     runs-on: ubuntu-latest

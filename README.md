@@ -120,10 +120,10 @@ Uji logika JavaScript form recovery secara terisolasi menggunakan Node.js: `node
 Proof of concept hak audit PostgreSQL dapat dijalankan pada `lms_saas_test` saja:
 
 ```powershell
-Get-Content -Raw -Encoding UTF8 tests/Support/m1_audit_privilege_probe.sql | docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -U lms_user -d lms_saas_test
+Get-Content -Raw -Encoding UTF8 tests/Support/m1_audit_privilege_probe.sql | .\scripts\m1-db-owner-command.ps1 -Mode test
 ```
 
-Script memakai role dan data sintetis dalam transaksi yang di-rollback; memerlukan operator test yang dapat membuat role
+Perintah ini memerlukan override role lokal dan secret owner yang sudah dipasang. Script memakai role dan data sintetis dalam transaksi yang di-rollback; memerlukan operator test yang dapat membuat role
 dan akan menolak database lain. Ini hanya menguji rancangan hak, **bukan** bukti bahwa role aplikasi saat ini sudah
 terlindungi. Usulan pemisahan role dan status review dicatat di `docs/runbooks/M1_ARCHITECTURE_GATE.md`.
 
@@ -135,6 +135,10 @@ Jangan bagikan atau commit `.env`, direktori secret, salinan `.env` lama, maupun
 Untuk lokal Windows yang sudah dikonfigurasi, jalankan migration menggunakan `./scripts/m1-operator.ps1 migrate`,
 seed menggunakan `./scripts/m1-operator.ps1 seed`, dan tes menggunakan `./scripts/m1-operator.ps1 test`. Jalur
 migration menerapkan ulang grant pada tabel yang ada; tanpa langkah ini tabel baru tidak otomatis dapat diakses runtime.
+Penerapan grant dan helper database privat membaca secret owner dari mount privat di container database; password tidak
+dikirim sebagai argumen. Pemeriksaan awal provisioning sebelum override aktif memakai client sementara dengan secret
+read-only. Secret tetap tersedia bagi administrator Docker/proses berwenang di dalam container, sehingga host dan
+akses Docker harus tetap dilindungi. Perubahan ini tidak mengaktifkan SCRAM atau mengubah `pg_hba` aktif.
 Jangan simpan data yang perlu dipertahankan pada database test. Untuk memeriksa koneksi dan hak audit runtime, jalankan
 `docker compose exec -T app php scripts/m1-check-runtime.php`; uji grant sintetis pada database test dapat diulang
 dengan `./tests/Support/m1_audit_runtime_grants_test.ps1`. Jika web memberi 502 setelah kontainer app dibuat ulang,
@@ -190,13 +194,17 @@ pemulihan setelah review. Jangan edit katalog sistem secara langsung.
 
 Uji helper dengan data sintetis di PostgreSQL sementara tanpa jaringan/volume persisten:
 `./tests/Support/m1-private-database-test.ps1`. Uji ini tidak membuat atau me-restore database pengguna.
-Job GitHub Actions `private-database-helper` menjalankan uji yang sama dengan PowerShell pada runner Linux;
-hasil GitHub baru tersedia setelah perubahan di-commit dan di-push oleh pengguna.
+Job GitHub Actions `private-database-helper` menjalankan uji helper dan lab SCRAM sintetis dengan PowerShell pada
+runner Linux. Semua script dan fixture sintetis yang dibutuhkan harus ikut di-commit; hasil GitHub baru tersedia
+setelah perubahan di-commit dan di-push oleh pengguna.
 
 Lab `./tests/Support/m1-scram-synthetic-test.ps1` menguji usulan SCRAM, bootstrap, dump/restore, dan rollback
 pada container sementara tanpa jaringan. Fixture `m1-hba-scram-synthetic.conf` **hanya untuk lab**, bukan konfigurasi
 siap pakai untuk server aktif. Lab tidak mengubah autentikasi PostgreSQL lokal atau membuktikan seluruh operasi aplikasi;
 hasil dan batasannya dicatat dalam `docs/runbooks/M1_ARCHITECTURE_GATE.md`.
+Lab juga menguji perintah owner yang sesungguhnya untuk database privat, grant, dan database test menggunakan secret
+sintetis, serta backup/restore melalui wrapper PowerShell dengan discovery Docker yang disimulasikan. Ini belum menguji
+alur lengkap pada database lokal aktif; jangan mengganti `pg_hba` aktif sampai seluruh gate yang tersisa ditinjau.
 
 ### Runbook pilot M1 — belum siap data nyata
 
@@ -245,13 +253,16 @@ database hasil restore; salinan lama bisa berisi undangan, sesi, dan status otor
    nama tujuan **belum ada** di `pg_database`. Pilih nama database latihan dan nama file backup/tidak sementara yang
    baru dan unik setiap kali; berhenti bila ada benturan atau target tidak jelas. Misalnya, pemeriksaan database:
 
+   Nama `lms_saas_restore_drill` **sudah digunakan oleh latihan yang dicatat di bawah**; jangan menimpanya.
+2. Untuk latihan yang telah disetujui, buat dump sumber `lms_saas` dengan nama baru, misalnya:
+
    ```powershell
-   docker compose exec -T db psql -U lms_user -d postgres -c "SELECT datname FROM pg_database WHERE datname IN ('lms_saas','lms_saas_test','lms_saas_restore_drill') ORDER BY datname;"
+   .\scripts\m1-db-owner-command.ps1 -Mode backup -BackupName lms_backup_contoh_01.dump
    ```
 
-   Nama `lms_saas_restore_drill` **sudah digunakan oleh latihan yang dicatat di bawah**; jangan menimpanya.
-2. `pg_dump -Fc` menghasilkan snapshot PostgreSQL. Pada latihan ini file sementara unik dibuat di `/tmp` container
-   dengan `umask 077` dan `set -C` untuk menolak benturan, lalu `docker compose cp` menyalinnya ke
+   `pg_dump -Fc` membuat file `/tmp/lms_backup_contoh_01.dump` dalam container database dengan `umask 077` dan
+   menolak nama yang sudah ada. Jika gagal, file parsial mungkin tetap ada: periksa dan jangan menimpanya. Dump ini
+   dapat disalin dengan `docker compose cp` ke
    `storage/app/private/backups/` yang diabaikan Git. Pastikan tujuan di Windows belum ada sebelum menyalin, periksa
    `git check-ignore`, bandingkan SHA-256 sumber dan salinan dengan `sha256sum` dan `Get-FileHash`, dan batasi ACL
    Windows ke akun operator, SYSTEM, dan administrator yang berwenang. Dump **tidak terenkripsi**, berisi seluruh
@@ -259,7 +270,17 @@ database hasil restore; salinan lama bisa berisi undangan, sesi, dan status otor
 3. Salin kembali file Windows ke nama sementara baru di container dan verifikasi SHA-256 kembali. Hanya setelah target
    baru dipastikan belum ada dan disetujui, buat dengan `scripts/m1-create-private-database.ps1` seperti di atas;
    **jangan gunakan `createdb` biasa** pada prosedur lokal yang sudah memakai role terpisah. Periksa ACL dan bahwa
-   runtime ditolak sebelum restore. Gunakan `pg_restore --exit-on-error --no-owner --no-acl` ke target baru tersebut.
+   runtime ditolak sebelum restore. Contoh restore setelah nama file dan target diperiksa dan disetujui:
+
+   ```powershell
+   .\scripts\m1-db-owner-command.ps1 -Mode restore -BackupName lms_backup_contoh_01.dump -Target lms_restore_contoh_01
+   ```
+
+   Wrapper menolak database aplikasi/test, file symlink, target nonprivat, dan target yang memiliki objek pengguna;
+   lalu menjalankan `pg_restore --exit-on-error --no-owner --no-acl`. Jangan izinkan proses lain terhubung atau menulis
+   ke target selama pemeriksaan dan restore: pemeriksaan kosong bukan lock terhadap koneksi lain. Gunakan hanya dump
+   tepercaya; restore dapat menjalankan SQL di dalam dump. Jika gagal, target bisa berisi hasil parsial; jangan ulangi
+   atau hapus secara otomatis.
    Opsi ini tidak membuktikan pemulihan owner/grant asli; restore produksi memerlukan rancangan dan pengujian hak akses
    tersendiri. Periksa exit code setiap perintah dan ulangi verifikasi akses sesudah restore.
 4. Bandingkan tabel dan jumlah baris, migration, struktur/constraint/index, sequence, serta data yang diperlukan.

@@ -3,6 +3,9 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 Set-Location $projectRoot
 $fixture = Join-Path $PSScriptRoot 'm1-hba-scram-synthetic.conf'
+$ownerScript = (Get-Content -LiteralPath 'scripts/m1-db-owner-command.sh' -Raw -Encoding UTF8).Replace("`r`n", "`n")
+$roleCheckScript = (Get-Content -LiteralPath 'scripts/m1-runtime-role-check.sh' -Raw -Encoding UTF8).Replace("`r`n", "`n")
+$grantsSql = (Get-Content -LiteralPath 'database/security/m1_audit_runtime_grants.sql' -Raw -Encoding UTF8).Replace("`r`n", "`n")
 $sql = (Get-Content -LiteralPath 'database/security/m1_create_private_database.sql' -Raw -Encoding UTF8).Replace("`r`n", "`n")
 $scratchName = 'lms-scram-lab-' + [guid]::NewGuid().ToString('N')
 $scratchId = $null
@@ -32,8 +35,61 @@ function Assert-Lab {
     Write-Host "PASS: $Message"
 }
 
+function Invoke-LabOwner {
+    param([string] $Script, [string[]] $Arguments = @(), [string] $InputText = '')
+    if ($PSVersionTable.PSVersion.Major -lt 7) { $Script = $Script.Replace('"', '\"') }
+    $savedPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        if ($InputText -ne '') {
+            $output = @($InputText | docker exec -i $scratchId sh -c $Script -- @Arguments 2>&1 | ForEach-Object { $_.ToString() })
+        } else {
+            $output = @(docker exec -i $scratchId sh -c $Script -- @Arguments 2>&1 | ForEach-Object { $_.ToString() })
+        }
+        $code = $LASTEXITCODE
+    } finally { $ErrorActionPreference = $savedPreference }
+    return [pscustomobject]@{ Code = $code; Output = (($output -join "`n").Trim()) }
+}
+
+function Invoke-WrapperLab {
+    param([string] $Mode, [string] $SqlText = '')
+    $dockerExecutable = (Get-Command docker -CommandType Application | Select-Object -First 1).Source
+    # Mock discovery only; all actual exec calls are confined to this lab container.
+    function docker {
+        begin { $DockerArgs = @($args); $chunks = @() }
+        process { if ($null -ne $_) { $chunks += $_ } }
+        end {
+            if ($DockerArgs.Count -ge 1 -and $DockerArgs[0] -eq 'compose') {
+                $global:LASTEXITCODE = 0
+                return $scratchId
+            }
+            if ($DockerArgs.Count -ge 1 -and $DockerArgs[0] -eq 'inspect') {
+                if ($DockerArgs[-1] -ne $scratchId) { throw 'Unexpected synthetic inspection target.' }
+                $global:LASTEXITCODE = 0
+                return '{"com.docker.compose.project":"lms-saas-local","com.docker.compose.service":"db"}'
+            }
+            if ($DockerArgs.Count -lt 3 -or $DockerArgs[0] -ne 'exec' -or $DockerArgs[2] -ne $scratchId) {
+                throw "Unexpected command or target in synthetic wrapper test (count=$($DockerArgs.Count), first=$($DockerArgs[0]))."
+            }
+            if ($DockerArgs[6] -ne '--') { $DockerArgs = @($DockerArgs[0..5]) + @('--') + @($DockerArgs[6..($DockerArgs.Count - 1)]) }
+            $chunks | & $dockerExecutable @DockerArgs
+        }
+    }
+    $savedPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $wrapper = Join-Path $projectRoot 'scripts/m1-db-owner-command.ps1'
+        switch ($Mode) {
+            'private' { $SqlText | & $wrapper -Mode private -Target lms_aux_wrapper_lab -ExpectedContainerId $scratchId }
+            'backup' { & $wrapper -Mode backup -BackupName lms_backup_wrapper.dump }
+            'restore' { & $wrapper -Mode restore -BackupName lms_backup_wrapper.dump -Target lms_aux_wrapper_lab }
+            default { throw 'Unsupported synthetic wrapper test.' }
+        }
+    } finally { $ErrorActionPreference = $savedPreference }
+}
+
 try {
-    $scratchId = (docker run --detach --rm --pull never --name $scratchName --network none `
+    $scratchId = (docker run --detach --rm --pull never --name $scratchName --network none --add-host db:127.0.0.1 `
         --tmpfs '/var/lib/postgresql/data:rw,size=256m' -e POSTGRES_USER=lms_user `
         -e POSTGRES_PASSWORD=synthetic-scram-only -e POSTGRES_DB=lms_saas postgres:17-alpine | Out-String).Trim()
     if ($LASTEXITCODE -ne 0 -or $scratchId -notmatch '^[a-f0-9]{64}$') { $scratchId = $null; throw 'Unable to start isolated PostgreSQL.' }
@@ -72,12 +128,48 @@ try {
     $health = Invoke-Lab 'unset PGPASSWORD; pg_isready -q -h 127.0.0.1 -U lms_user -d lms_saas'
     Assert-Lab ($health.Code -eq 0) 'Readiness probe works without authenticating credentials'
 
-    $created = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; exec psql -X -w -v ON_ERROR_STOP=1 -v target_db=lms_restore_scram_lab -U lms_user -d postgres' $sql
-    Assert-Lab ($created.Code -eq 0) 'Checked-in private database SQL works using owner SCRAM'
-    $restore = Invoke-Lab 'set -o pipefail; export PGPASSWORD="$POSTGRES_PASSWORD"; pg_dump -Fc -U lms_user -d lms_saas | pg_restore --exit-on-error --no-owner --no-acl -U lms_user -d lms_restore_scram_lab'
+    $missingSecret = Invoke-LabOwner $ownerScript @('private','lms_restore_missing_secret') $sql
+    Assert-Lab ($missingSecret.Code -ne 0 -and $missingSecret.Output -match 'Owner secret is unavailable') 'Owner command fails closed without a secret'
+    docker exec $scratchId mkdir -p /run/secrets
+    if ($LASTEXITCODE -ne 0) { throw 'Could not prepare synthetic secret directory.' }
+    docker cp (Join-Path $PSScriptRoot 'm1-synthetic-wrong-secret.txt') "${scratchId}:/run/secrets/postgres_owner_password"
+    if ($LASTEXITCODE -ne 0) { throw 'Could not copy wrong synthetic secret.' }
+    $wrongSecret = Invoke-LabOwner $ownerScript @('private','lms_restore_wrong_secret') $sql
+    Assert-Lab ($wrongSecret.Code -ne 0 -and $wrongSecret.Output -match 'password authentication failed') 'Owner command rejects an incorrect synthetic credential'
+    docker cp (Join-Path $PSScriptRoot 'm1-synthetic-owner-secret.txt') "${scratchId}:/run/secrets/postgres_owner_password"
+    if ($LASTEXITCODE -ne 0) { throw 'Could not copy synthetic secret.' }
+    $invalidTarget = Invoke-LabOwner $ownerScript @('private','lms_saas') $sql
+    Assert-Lab ($invalidTarget.Code -ne 0 -and $invalidTarget.Output -match 'Invalid private database name') 'Owner command rejects application database target'
+    $created = Invoke-LabOwner $ownerScript @('private','lms_restore_scram_lab') $sql
+    Assert-Lab ($created.Code -eq 0) 'Actual owner command and private database SQL work using SCRAM'
+    $wrapperResult = Invoke-WrapperLab 'private' $sql
+    $wrapperState = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -U lms_user -d postgres -tAc "SELECT count(*) FROM pg_database WHERE datname=''lms_aux_wrapper_lab'' AND datallowconn AND NOT has_database_privilege(''lms_runtime'',oid,''CONNECT'')"'
+    Assert-Lab ($wrapperState.Code -eq 0 -and $wrapperState.Output -eq '1') 'PowerShell owner wrapper forwards SQL to the synthetic container'
+    $fixtures = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -v ON_ERROR_STOP=1 -U lms_user -d lms_saas -c "CREATE TABLE platform_audit_logs (id integer); CREATE TABLE tenant_audit_logs (id integer); CREATE TABLE migrations (id integer);"'
+    $grants = Invoke-LabOwner $ownerScript @('grants') $grantsSql
+    $grantCheck = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -U lms_user -d lms_saas -tAc "SELECT has_table_privilege(''lms_runtime'',''platform_audit_logs'',''INSERT'')::int || ''|'' || has_table_privilege(''lms_runtime'',''platform_audit_logs'',''DELETE'')::int"'
+    Assert-Lab ($fixtures.Code -eq 0 -and $grants.Code -eq 0 -and $grantCheck.Code -eq 0 -and $grantCheck.Output -eq '1|0') 'Actual grant command keeps synthetic audit append-only'
+    $roleCheck = Invoke-LabOwner $roleCheckScript
+    Assert-Lab ($roleCheck.Code -eq 0 -and $roleCheck.Output -eq '1') 'Actual provisioning preflight authenticates over SCRAM'
+    $testDb = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -v ON_ERROR_STOP=1 -U lms_user -d postgres -c "CREATE DATABASE lms_saas_test"'
+    $testMode = Invoke-LabOwner $ownerScript @('test') 'SELECT current_database();'
+    Assert-Lab ($testDb.Code -eq 0 -and $testMode.Code -eq 0 -and $testMode.Output -match 'lms_saas_test') 'Owner test mode targets the dedicated test database under SCRAM'
+    $backup = Invoke-LabOwner $ownerScript @('backup','lms_backup_synthetic.dump')
+    $backupCollision = Invoke-LabOwner $ownerScript @('backup','lms_backup_synthetic.dump')
+    Assert-Lab ($backup.Code -eq 0 -and $backupCollision.Code -ne 0) 'Owner backup uses SCRAM and refuses an existing filename'
+    $wrapperBackup = Invoke-WrapperLab 'backup'
+    $wrapperRestore = Invoke-WrapperLab 'restore'
+    $wrapperRestored = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -U lms_user -d lms_aux_wrapper_lab -tAc "SELECT count(*) FROM synthetic_marker"'
+    Assert-Lab ($wrapperRestored.Code -eq 0 -and $wrapperRestored.Output -eq '1') 'PowerShell backup and restore wrapper works on synthetic data'
+    $unsafeRestore = Invoke-LabOwner $ownerScript @('restore','lms_backup_synthetic.dump','lms_saas')
+    Assert-Lab ($unsafeRestore.Code -ne 0) 'Owner restore refuses the application database'
+    $restore = Invoke-LabOwner $ownerScript @('restore','lms_backup_synthetic.dump','lms_restore_scram_lab')
     $result = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -U lms_user -d lms_restore_scram_lab -tAc "SELECT count(*) FROM synthetic_marker"'
     $denied = Invoke-Lab 'export PGPASSWORD=synthetic-runtime-only; psql -X -w -U lms_runtime -d lms_restore_scram_lab -tAc "SELECT current_user"'
     Assert-Lab ($restore.Code -eq 0 -and $result.Code -eq 0 -and $result.Output -eq '1' -and $denied.Code -ne 0 -and $denied.Output -match 'permission denied for database') 'Synthetic dump/restore succeeds and runtime remains denied'
+    $repeatRestore = Invoke-LabOwner $ownerScript @('restore','lms_backup_synthetic.dump','lms_restore_scram_lab')
+    $resultAgain = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -U lms_user -d lms_restore_scram_lab -tAc "SELECT count(*) FROM synthetic_marker"'
+    Assert-Lab ($repeatRestore.Code -ne 0 -and $resultAgain.Code -eq 0 -and $resultAgain.Output -eq '1') 'Restore refuses a nonempty database and preserves its data'
 
     $rollback = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; cp /tmp/lab-hba-original.conf /var/lib/postgresql/data/pg_hba.conf && psql -X -w -U lms_user -d postgres -tAc "SELECT pg_reload_conf()"'
     Assert-Lab ($rollback.Code -eq 0 -and $rollback.Output -eq 't') 'Synthetic original HBA rollback requested'

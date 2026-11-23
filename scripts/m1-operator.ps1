@@ -21,7 +21,10 @@ docker compose run --rm --no-deps --volume "${ownerSecret}:/run/secrets/postgres
 if ($LASTEXITCODE -ne 0) { throw "Operasi owner $Operation gagal dengan exit code $LASTEXITCODE." }
 
 if ($Operation -eq 'migrate') {
-    Get-Content -Raw -Encoding UTF8 'database/security/m1_audit_runtime_grants.sql' |
-        docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -U lms_user -d lms_saas
-    if ($LASTEXITCODE -ne 0) { throw 'Migration selesai, tetapi penerapan ulang hak runtime gagal; hentikan rollout.' }
+    try {
+        Get-Content -Raw -Encoding UTF8 'database/security/m1_audit_runtime_grants.sql' |
+            & "$PSScriptRoot/m1-db-owner-command.ps1" -Mode grants
+    } catch {
+        throw 'Migration selesai, tetapi penerapan ulang hak runtime gagal; hentikan rollout.'
+    }
 }

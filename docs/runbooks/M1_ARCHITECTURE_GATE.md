@@ -331,16 +331,65 @@ yang telah diautentikasi; reload hanya setelah validasi rule dan rencana rollbac
 sebagai root menjadi tidak terbaca PostgreSQL dan rollback gagal sampai pengujian mempertahankan akses user postgres.
 Reload yang dilaporkan berhasil saja tidak membuktikan rule aktif; uji koneksi positif/negatif setelah reload.
 
-Khususnya `scripts/m1-create-private-database.ps1`, langkah grant ulang dalam `scripts/m1-operator.ps1`/`.sh`,
-`scripts/m1-prepare-runtime.ps1`, perintah `psql`/dump/restore di README dan probe yang memakai socket saat ini masih
-perlu penyesuaian dan pengujian sebelum perubahan live. Lab belum menguji wrapper Windows terhadap SCRAM, proses
+Pada review awal, `scripts/m1-create-private-database.ps1`, langkah grant ulang dalam `scripts/m1-operator.ps1`/`.sh`,
+`scripts/m1-prepare-runtime.ps1`, perintah `psql`/dump/restore di README dan probe yang memakai socket masih
+memerlukan penyesuaian; lihat pembaruan operator di bawah. Lab awal belum menguji wrapper Windows terhadap SCRAM, proses
 migration/test Laravel, aplikasi multi-tenant, loopback IPv6, koneksi jaringan container lain, atau bootstrap dengan
 secret owner lokal yang sebenarnya. Kredensial lab tidak dipakai di server pengguna. Perubahan `pg_hba` aktif,
 adaptasi operator, serta prosedur pemulihan nyata memerlukan persetujuan pengguna tersendiri.
 
-Workflow `.github/workflows/m0-ci.yml` kini menambahkan job terpisah untuk `m1-private-database-test.ps1` dengan
-image PostgreSQL 17 dan data sintetis. Uji tersebut lulus lokal 27 pemeriksaan pada Windows PowerShell; job pada
-GitHub Actions/Linux belum dijalankan dan tidak boleh dicatat lulus sebelum ada hasil aktual.
+**Pembaruan persiapan operator — tidak mengubah HBA aktif.** Script owner untuk pembuatan database privat,
+grant setelah migration, probe database test, backup dan restore sekarang membaca secret owner dari mount privat di container database;
+password tidak dikirim dalam argumen. Preflight provisioning sebelum override aktif memakai client sementara dengan
+mount secret read-only. Test SCRAM sintetis menjalankan script owner dan SQL sebenarnya, termasuk penolakan secret
+hilang/salah, target database tidak aman, grant audit, dump/restore, tabrakan nama backup, penolakan restore berulang,
+dan pembungkus PowerShell dengan discovery Docker yang disimulasikan.
+Penggunaan `PGPASSWORD` di proses sementara masih dapat dilihat oleh administrator host/container atau proses yang
+berwenang; ini bukan perlindungan dari akses administratif Docker. Tidak ada perubahan schema atau aturan HBA server aktif.
+
+Backup/restore dengan secret privat sudah diuji end-to-end pada container sintetis, bukan pada server lokal aktif.
+Restore memerlukan target privat kosong dan dump tepercaya; pemeriksaan kosong bukan lock untuk mencegah akses paralel,
+dan kegagalan restore dapat meninggalkan data parsial. Pemindahan/penyimpanan file backup dari container ke host,
+wrapper penuh pembuatan database, alur migration/seed aktual, dan test lintas container pasca-SCRAM pada konfigurasi
+lokal juga belum dibuktikan dalam pengujian ini.
+Jangan menyimpulkan bahwa seluruh operator siap atau menerapkan SCRAM aktif hanya dari hasil lab ini.
+
+Hasil uji lokal 2026-11-23: lab SCRAM/operator lulus 26 pemeriksaan, helper database privat lulus 27 pemeriksaan,
+dan integrasi runtime sintetis lintas tenant lulus 2 test/43 assertion. Pratinjau helper `-WhatIf` tidak membuat
+database. Composer valid dan Pint lulus 110 file. Tidak ada migration, backup, restore, perubahan HBA, atau perubahan
+data pada server aplikasi aktif dalam pekerjaan ini; suite Laravel penuh tidak dijalankan pada database lokal.
+
+**Review kesiapan SCRAM lokal — 2026-11-23; keputusan penerapan: belum disetujui.** Pemeriksaan read-only ulang
+menemukan tujuh rule HBA valid pada file: `trust` untuk socket dan loopback IPv4/IPv6, termasuk tiga rule replikasi,
+serta `scram-sha-256` untuk jaringan lainnya. File berada di volume data PostgreSQL, dimiliki `postgres:postgres`
+dengan mode `600`; `password_encryption` saat ini SCRAM. Tanpa password, koneksi runtime read-only masih berhasil
+melalui socket dan IPv4 loopback. Jenis verifier owner dan runtime keduanya SCRAM; uji owner read-only memakai secret
+terpasang secara privat melalui hostname `db` yang ter-resolve ke alamat jaringan non-loopback dan berhasil. Uji
+aplikasi read-only berhasil sebagai runtime dan memverifikasi hak audit. Tidak ada password/verifier yang dicetak.
+
+`pg_hba_file_rules` menunjukkan isi file, bukan bukti rule mana yang sudah dimuat; koneksi negatif/positif baru tetap
+harus diuji setelah reload. PostgreSQL memilih rule pertama yang cocok; [referensi HBA PostgreSQL 17](https://www.postgresql.org/docs/17/auth-pg-hba-conf.html)
+dan [referensi view HBA](https://www.postgresql.org/docs/17/view-pg-hba-file-rules.html). `pg_isready` hanya memeriksa kesiapan server,
+bukan kebenaran credential. Perubahan ini tidak mengakhiri atau membuktikan perubahan pada koneksi yang sudah ada.
+
+**Gate sebelum meminta persetujuan penerapan:**
+
+1. Tentukan secara eksplisit perlakuan untuk ketiga rule replikasi setelah inventarisasi client/role replikasi;
+   jangan menyalin fixture lab atau mengganti semua rule secara membabi buta. Pastikan rule jaringan dan urutannya tetap benar.
+2. Siapkan dan verifikasi salinan konfigurasi HBA asli, pemilik/mode `postgres:postgres`/`600`, serta jalur pemulihan
+   yang bisa digunakan jika login baru gagal. Backup database sebelumnya tidak otomatis membuktikan kesiapan rollback HBA.
+3. Konfirmasi backup yang dapat dipulihkan, status operator dan credential tanpa mencetaknya, serta waktu penghentian
+   pekerjaan yang sesuai. Lab belum membuktikan seluruh wrapper/migration/seed dan pemindahan backup host pada SCRAM live.
+4. Rencanakan perubahan minimal dan reload pada container Linux, lalu uji koneksi baru owner/runtime benar dan tanpa
+   password, aplikasi/worker/scheduler, hak audit, dan isolasi tenant. Jangan bergantung pada healthcheck saja; jika ada
+   kegagalan, hentikan rollout dan jalankan rollback yang sudah direview. Jangan menonaktifkan audit atau menghapus volume.
+5. Persetujuan terpisah dari pengguna diperlukan untuk membuat backup konfigurasi aktual, mengubah HBA atau menjalankan
+   reload/rollback pada server lokal. Review ini tidak membuat backup baru dan tidak menjalankan tindakan tersebut.
+
+Workflow `.github/workflows/m0-ci.yml` menambahkan lab `m1-scram-synthetic-test.ps1` ke job helper database privat,
+dengan image PostgreSQL 17 dan data sintetis. Pada Windows PowerShell, lab lulus 26 dan helper lulus 27 pemeriksaan;
+job GitHub Actions/Linux belum dijalankan dan tidak boleh dicatat lulus sebelum ada hasil aktual. File operator dan
+fixture sintetis yang belum dilacak Git wajib ikut di-commit agar job dapat berjalan.
 
 ```text
 Audit database hardening design: [x] Approved — reviewer: user (chat approval), date: 2026-11-21

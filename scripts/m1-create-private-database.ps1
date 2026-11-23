@@ -59,8 +59,10 @@ $previousPreference = $ErrorActionPreference
 try {
     $ErrorActionPreference = 'Continue'
     Get-Content -LiteralPath 'database/security/m1_create_private_database.sql' -Raw -Encoding UTF8 |
-        docker exec -i $databaseId psql -X -v ON_ERROR_STOP=1 -v "target_db=$DatabaseName" -U lms_user -d postgres
-    $result = $LASTEXITCODE
+        & "$PSScriptRoot/m1-db-owner-command.ps1" -Mode private -Target $DatabaseName -ExpectedContainerId $databaseId
+    $result = 0
+} catch {
+    $result = 1
 } finally {
     $ErrorActionPreference = $previousPreference
 }

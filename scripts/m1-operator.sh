@@ -10,5 +10,8 @@ case "${1:-}" in migrate|seed|test|test-m0) operation=$1 ;; *) echo 'Allowed: mi
 docker compose run --rm --no-deps --volume "$owner_secret:/run/secrets/postgres_owner_password:ro" \
     --entrypoint sh app scripts/m1-owner-exec.sh "$operation"
 if [ "$operation" = migrate ]; then
-    docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -U lms_user -d lms_saas < database/security/m1_audit_runtime_grants.sql
+    owner_command=$(tr -d '\r' < scripts/m1-db-owner-command.sh)
+    docker compose exec -T db sh -c "$owner_command" -- grants < database/security/m1_audit_runtime_grants.sql || {
+        echo 'Migration completed but runtime grants failed; stop rollout.' >&2; exit 1;
+    }
 fi

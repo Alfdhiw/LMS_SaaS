@@ -15,5 +15,4 @@ $grantSql = $grantSql.Replace('lms_runtime', 'lms_audit_runtime_probe')
 $assertions = $assertions.Replace('lms_runtime', 'lms_audit_runtime_probe')
 $grantSql = $grantSql.Replace('BEGIN;', "BEGIN;`nCREATE ROLE lms_audit_runtime_probe LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;")
 $grantSql = $grantSql.Replace('COMMIT;', $assertions)
-$grantSql | docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -U lms_user -d lms_saas_test
-if ($LASTEXITCODE -ne 0) { throw "Uji grant audit gagal dengan exit code $LASTEXITCODE." }
+$grantSql | & "$PSScriptRoot/../../scripts/m1-db-owner-command.ps1" -Mode test
