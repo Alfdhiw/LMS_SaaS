@@ -391,6 +391,123 @@ dengan image PostgreSQL 17 dan data sintetis. Pada Windows PowerShell, lab lulus
 job GitHub Actions/Linux belum dijalankan dan tidak boleh dicatat lulus sebelum ada hasil aktual. File operator dan
 fixture sintetis yang belum dilacak Git wajib ikut di-commit agar job dapat berjalan.
 
+### Kandidat aturan replikasi dan persiapan rollback HBA — 2026-11-23
+
+Permintaan pengguna untuk melanjutkan rekomendasi nomor 1 mencakup penentuan aturan replikasi dan penyiapan backup/
+rollback. Instalasi kandidat atau reload pada server aktif belum termasuk tahap ini.
+
+Inventarisasi read-only: server bukan standby; `pg_stat_replication`, `pg_replication_slots`, dan `pg_subscription`
+masing-masing berjumlah nol. Satu-satunya role dengan superuser/replication adalah owner `lms_user`; tidak ditemukan
+konfigurasi client replikasi dalam script, Docker atau workflow repository. `wal_level=replica` dan batas sender/slot
+10 adalah kemampuan server, bukan bukti bahwa replikasi digunakan. Client eksternal yang sedang tidak aktif tidak
+dapat dibuktikan tidak ada hanya dari snapshot ini; ulangi inventarisasi sebelum pemasangan.
+
+Rancangan operasional: **pertahankan cakupan tiga rule replikasi socket/loopback dan ganti autentikasi menjadi SCRAM**.
+Tidak ada perubahan role, `wal_level`, jumlah sender/slot, atau penambahan rule physical replication dari jaringan lain.
+`database/security/m1_pg_hba_scram_local.conf` berisi tujuh rule dengan urutan dan cakupan yang sama:
+
+| Koneksi | Database | Alamat | Sebelum | Kandidat |
+|---|---|---|---|---|
+| Socket | all | — | trust | scram-sha-256 |
+| TCP | all | 127.0.0.1/32 | trust | scram-sha-256 |
+| TCP | all | ::1/128 | trust | scram-sha-256 |
+| Socket | replication | — | trust | scram-sha-256 |
+| TCP | replication | 127.0.0.1/32 | trust | scram-sha-256 |
+| TCP | replication | ::1/128 | trust | scram-sha-256 |
+| TCP | all | all | scram-sha-256 | scram-sha-256 |
+
+Keyword `all` pada kolom database tidak mencakup physical replication; akses replikasi fisik dari alamat lain tetap
+tidak ditambahkan. Logical replication memakai aturan koneksi database biasa. Rujukan: [PostgreSQL HBA](https://www.postgresql.org/docs/17/auth-pg-hba-conf.html).
+
+**Snapshot aktual telah dibuat**, tanpa mengubah konfigurasi aktif:
+
+- Lokasi privat di luar repository/mount aplikasi: `../.lms-saas-ops/hba/20261123T144452-2f0f9ae8/`.
+- `pg_hba.original.conf` adalah salinan byte-for-byte HBA aktif; SHA-256
+  `af0fdb739b67d1a552cd82c19311b813e753d4f651a61e6b563f48b55dca5e74` cocok dengan sumber sebelum dan sesudah penyalinan.
+- `pg_hba.proposed.conf`, `m1-hba-rollback.sh`, dan `manifest.json` membekukan kandidat, alat pemulihan, identitas
+  container/cluster/volume, dan checksum untuk review. SHA-256 kandidat
+  `9af0628899a703be2d8ad8c402a5ccd3662b40606f10ef2d57426e1d0b4423b1`.
+- ACL direktori tidak mewarisi akses dan hanya mengizinkan akun operator saat ini, SYSTEM, dan Administrators.
+  Snapshot tidak berisi password/database dump. Jangan menyalin isi direktori secret atau menjadikannya mount aplikasi.
+
+**Prosedur rollback untuk digunakan setelah tindakan pemulihan disetujui:**
+
+1. Cocokkan context/endpoint Docker Desktop lokal, ID container, volume `lms-saas-local_postgres_data`, identitas
+   cluster dan lokasi HBA dengan manifest. Jika container dibuat ulang atau identitas berubah, hentikan dan review
+   ulang; jangan memakai ID/nama yang ditebak. Pastikan tidak ada edit HBA paralel.
+2. Verifikasi SHA-256 ketiga file snapshot terhadap manifest. HBA saat ini harus cocok dengan checksum kandidat yang
+   hendak dibatalkan. Jika berbeda, periksa perubahan tersebut sebelum memilih checksum yang akan diizinkan;
+   script sengaja menolak drift. Jangan mengubah manifest untuk melewati pemeriksaan tanpa review.
+3. Salin hanya `pg_hba.original.conf` dengan `docker cp` ke nama staging baru dan belum ada, misalnya
+   `/tmp/lms_hba_recovery_<id_unik>.conf` pada container yang sudah diverifikasi. Setelah menyalin, gunakan akses
+   administratif Docker untuk memberi owner `postgres:postgres` dan mode `600` pada **file staging itu saja**.
+   Jangan menyalin langsung ke HBA aktif dan jangan mengubah permission direktori data secara rekursif.
+4. Jalankan isi script rollback yang checksum-nya telah diverifikasi menggunakan `docker exec -u postgres ... sh -c`,
+   dengan argumen setelah `--`: path staging, SHA-256 asli, SHA-256 HBA kandidat. Script memeriksa semua argumen dan
+   checksum, membuat file sementara unik di direktori data, memasang salinan secara atomik dengan owner/mode yang
+   benar, lalu menjalankan `pg_ctl -D /var/lib/postgresql/data reload`. Jalur ini tidak memerlukan login database.
+5. Sukses mengirim sinyal reload bukan bukti autentikasi sudah berubah. Bandingkan SHA-256, owner/mode file, rule/error
+   HBA, koneksi baru dan koneksi runtime aplikasi; tinjau log server secara privat. Setelah hasil terverifikasi, hapus
+   hanya staging yang dibuat operasi ini. Simpan snapshot asli. Rollback mengembalikan `trust` lama untuk pemulihan
+   sementara, sehingga akses Docker tetap administratif dan perbaikan SCRAM harus dijadwalkan ulang.
+
+Lab sekarang memakai kandidat tujuh rule yang sama. Hasil: **33 pemeriksaan lulus**, termasuk IPv4/IPv6, physical
+replication dengan password benar/salah/tidak ada, penolakan runtime untuk replikasi, batas rule remote replication,
+checksum rollback yang salah/drift, pemulihan byte asli dan mode `600`, serta reload tanpa credential database.
+Seluruh perubahan HBA/reload untuk pengujian terjadi pada PostgreSQL sintetis. Tidak ada instalasi kandidat,
+reload, migration atau perubahan data aplikasi pada server aktif; persetujuan penerapan masih terbuka.
+
+Latihan tambahan dengan `-HbaSnapshotPath ../.lms-saas-ops/hba/20261123T144452-2f0f9ae8/pg_hba.original.conf`
+lulus **34 pemeriksaan**: salinan konfigurasi lokal yang asli dipakai sebagai baseline pada server sintetis, lalu
+kandidat diuji dan dikembalikan ke checksum snapshot tersebut. Opsi ini hanya mengirim file konfigurasi ke container
+sementara; default CI tetap memakai baseline sintetis dan tidak memerlukan file privat lokal. Verifikasi seluruh
+checksum manifest dan ACL snapshot lulus dengan identitas operator yang berwenang. SHA-256 HBA aktif tetap sama.
+Regresi integrasi runtime sintetis lintas tenant lulus 2 test/43 assertion; ini tidak membuktikan perubahan HBA pada
+aplikasi aktif. Container latihan dibersihkan setelah selesai.
+
+### Penerapan HBA SCRAM lokal — disetujui dan diverifikasi 2026-11-23
+
+Pengguna menyetujui pertanyaan pemasangan kandidat dan reload dengan jawaban "oke saya setujui". Persetujuan mencakup
+perubahan autentikasi lokal dan pemulihan jika verifikasi gagal; tidak mencakup perubahan schema, data, Git push,
+atau deployment produksi. Catatan "belum disetujui/belum dipasang" pada bagian sebelumnya adalah riwayat persiapan.
+
+Preflight mencocokkan context/endpoint Docker Desktop, container, cluster, volume, lokasi HBA, checksum snapshot dan
+kandidat, verifier SCRAM kedua role, serta inventarisasi replikasi yang masih nol. Credential owner dan runtime
+diverifikasi melalui jaringan SCRAM sebelum pemasangan. HTTP baseline lulus enam pemeriksaan.
+
+File terpasang secara atomik pada `/var/lib/postgresql/data/pg_hba.conf`, tetap dimiliki `postgres:postgres` dengan
+mode `600`, kemudian reload diminta melalui `pg_ctl`. SHA-256 aktif cocok dengan kandidat yang disetujui:
+`9af0628899a703be2d8ad8c402a5ccd3662b40606f10ef2d57426e1d0b4423b1`. Ketujuh rule menggunakan `scram-sha-256`;
+tidak ada perluasan alamat atau hak replikasi, pergantian role/password, restart service, atau perubahan Docker M0.
+
+**Hasil aktual: 54 pemeriksaan rollout lulus.** Koneksi baru owner berhasil melalui socket, IPv4 dan IPv6; koneksi
+owner/runtime dengan password salah atau tanpa password ditolak pada ketiganya. Runtime dengan secret privat yang
+benar berhasil pada IPv4/IPv6. Physical replication owner dengan password berhasil, tanpa password ditolak, dan
+runtime tetap tidak berhak replikasi. Semua rule ter-parse tanpa error. Koneksi runtime baru dan hak audit lulus pada
+app, worker dan scheduler; HTTP central, tiga tenant, unknown host dan loopback tetap lulus enam pemeriksaan.
+
+Jumlah tenant/user/migration sebelum dan sesudah tetap **3/4/5**. Pemeriksaan tambahan wrapper operator PowerShell
+sebenarnya pada server aktif lulus dengan query read-only. Tidak ada migration, seed, DDL/grant, restore database,
+atau perubahan data siswa. Password tidak dicetak atau disalin ke argumen/log. Semua layanan tetap berjalan;
+rollback tidak diperlukan. Dua file staging operasi ini sudah dihapus; snapshot asli tetap tersedia untuk pemulihan.
+
+Bukti privat di `../.lms-saas-ops/hba/20261123T144452-2f0f9ae8/`:
+
+- `apply-reviewed.ps1`: operasi pemasangan lokal yang memakai routine penggantian atomik teruji dan memulihkan HBA
+  asli bila pemeriksaan kritis gagal. Skrip ini terikat snapshot/container awal dan bukan installer umum.
+- `rollout-77ce8774306444ee95dea5be5564be0e.json`: preflight read-only sebelum pemasangan.
+- `rollout-6345cd195a4c4d30a47e5265ae0179f9.json`: hasil `verified-applied`, 54 pemeriksaan,
+  2026-11-23 08:02:11–08:03:19 UTC; checksum, jumlah baris, dan pembersihan staging tercatat.
+
+Manifest snapshot tetap menyimpan status persiapan awal yang tidak ditimpa; record rollout di atas adalah bukti
+penerapan terbaru. Batas pengujian: sesi worker lama tidak diputus; pemeriksaan memakai koneksi baru. Workflow
+migration/seed dan backup/restore penuh pada server aktif belum dijalankan ulang. Volume baru/instalasi M0 lain tidak
+otomatis memakai HBA ini. Status produksi, RLS, review PR6 dan bukti GitHub Actions tetap mengikuti gate masing-masing.
+
+Verifikasi penutup setelah rollout: regresi runtime lintas tenant pada server sintetis lulus **2 test/43 assertion**;
+tidak ditemukan indikator error pemuatan HBA dalam log periode rollout yang diperiksa secara privat. Checksum HBA
+aktif tetap cocok dengan kandidat. Pemeriksaan log tidak mencetak isi log, query, atau credential.
+
 ```text
 Audit database hardening design: [x] Approved — reviewer: user (chat approval), date: 2026-11-21
 Implementation: local rollout verified — not production approval; PR6 remains under review.

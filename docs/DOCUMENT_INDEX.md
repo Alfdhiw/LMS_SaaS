@@ -86,3 +86,10 @@ menyetujui rancangan recovery siswa tanpa email dengan dua sesi privat dan verif
 token siswa. Pengguna menyetujui PR5 dan mengizinkan PR6 pada 2026-11-21. Pengujian otomatis akhir PR5 lulus;
 verifikasi browser HTTPS masih terbuka. Implementasi PR6 tersedia untuk review dan belum disetujui; bukti test dan
 gate yang masih terbuka dicatat di `docs/runbooks/M1_ARCHITECTURE_GATE.md`.
+
+## J. Status hardening autentikasi PostgreSQL lokal
+
+Pengguna menyetujui pemasangan kandidat HBA dan reload PostgreSQL lokal pada 2026-11-23. Kandidat tujuh rule dengan
+SCRAM sudah diterapkan pada volume lokal yang direview; hasil rollout dan bukti pemulihan dicatat di
+`docs/runbooks/M1_ARCHITECTURE_GATE.md`. Ini adalah perubahan operasional tanpa perubahan ERD/schema, berlaku untuk
+instalasi lokal tersebut, dan tidak mengubah status review PR6 atau menjadi approval produksi.

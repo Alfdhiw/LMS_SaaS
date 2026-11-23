@@ -138,7 +138,9 @@ migration menerapkan ulang grant pada tabel yang ada; tanpa langkah ini tabel ba
 Penerapan grant dan helper database privat membaca secret owner dari mount privat di container database; password tidak
 dikirim sebagai argumen. Pemeriksaan awal provisioning sebelum override aktif memakai client sementara dengan secret
 read-only. Secret tetap tersedia bagi administrator Docker/proses berwenang di dalam container, sehingga host dan
-akses Docker harus tetap dilindungi. Perubahan ini tidak mengaktifkan SCRAM atau mengubah `pg_hba` aktif.
+akses Docker harus tetap dilindungi. Pada instalasi lokal ini, pengguna menyetujui pemasangan HBA pada 2026-11-23:
+ketujuh rule kini menggunakan SCRAM, termasuk socket/loopback dan replikasi lokal. Setup M0/CI atau volume PostgreSQL
+baru tidak otomatis mewarisi konfigurasi volume lokal ini; jangan menganggap instalasi baru sudah memiliki hardening yang sama.
 Jangan simpan data yang perlu dipertahankan pada database test. Untuk memeriksa koneksi dan hak audit runtime, jalankan
 `docker compose exec -T app php scripts/m1-check-runtime.php`; uji grant sintetis pada database test dapat diulang
 dengan `./tests/Support/m1_audit_runtime_grants_test.ps1`. Jika web memberi 502 setelah kontainer app dibuat ulang,
@@ -199,12 +201,20 @@ runner Linux. Semua script dan fixture sintetis yang dibutuhkan harus ikut di-co
 setelah perubahan di-commit dan di-push oleh pengguna.
 
 Lab `./tests/Support/m1-scram-synthetic-test.ps1` menguji usulan SCRAM, bootstrap, dump/restore, dan rollback
-pada container sementara tanpa jaringan. Fixture `m1-hba-scram-synthetic.conf` **hanya untuk lab**, bukan konfigurasi
-siap pakai untuk server aktif. Lab tidak mengubah autentikasi PostgreSQL lokal atau membuktikan seluruh operasi aplikasi;
+pada container sementara tanpa jaringan. Kandidat `database/security/m1_pg_hba_scram_local.conf` mempertahankan tujuh
+rule server lokal yang direview dan mewajibkan SCRAM juga untuk replikasi socket/loopback. File tersebut sudah dipasang
+pada volume lokal yang disetujui; lab sendiri tetap memakai container sementara dan tidak membuktikan seluruh operasi aplikasi;
 hasil dan batasannya dicatat dalam `docs/runbooks/M1_ARCHITECTURE_GATE.md`.
 Lab juga menguji perintah owner yang sesungguhnya untuk database privat, grant, dan database test menggunakan secret
-sintetis, serta backup/restore melalui wrapper PowerShell dengan discovery Docker yang disimulasikan. Ini belum menguji
-alur lengkap pada database lokal aktif; jangan mengganti `pg_hba` aktif sampai seluruh gate yang tersisa ditinjau.
+sintetis, serta backup/restore melalui wrapper PowerShell dengan discovery Docker yang disimulasikan. Setelah penerapan
+lokal, 54 pemeriksaan rollout lulus, termasuk koneksi baru, penolakan credential salah/kosong, hak audit, dan enam rute
+HTTP. Migration/seed dan backup/restore penuh pada server aktif belum diulang dalam tahap ini.
+Backup HBA dan manifest pemulihan disimpan di `../.lms-saas-ops/hba/`, di luar mount aplikasi dan repository ini,
+dengan ACL privat. Prosedur `scripts/m1-hba-rollback.sh` memverifikasi checksum backup dan HBA saat ini, mempertahankan
+owner/mode PostgreSQL, lalu meminta reload melalui `pg_ctl` tanpa login database. Penggunaannya hanya untuk pemulihan
+yang disetujui; snapshot asli memulihkan pula aturan `trust` lama. Manifest mempertahankan catatan persiapan awal;
+hasil penerapan tersedia dalam record `rollout-6345cd195a4c4d30a47e5265ae0179f9.json` pada folder snapshot yang sama.
+Lihat identitas snapshot dan langkah verifikasi di gate.
 
 ### Runbook pilot M1 — belum siap data nyata
 

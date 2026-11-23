@@ -1,8 +1,11 @@
 # Disposable synthetic PostgreSQL only: never targets Compose or the application database.
+param([string] $HbaSnapshotPath)
+
 $ErrorActionPreference = 'Stop'
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 Set-Location $projectRoot
-$fixture = Join-Path $PSScriptRoot 'm1-hba-scram-synthetic.conf'
+$fixture = Join-Path $projectRoot 'database/security/m1_pg_hba_scram_local.conf'
+$rollbackScript = (Get-Content -LiteralPath 'scripts/m1-hba-rollback.sh' -Raw -Encoding UTF8).Replace("`r`n", "`n")
 $ownerScript = (Get-Content -LiteralPath 'scripts/m1-db-owner-command.sh' -Raw -Encoding UTF8).Replace("`r`n", "`n")
 $roleCheckScript = (Get-Content -LiteralPath 'scripts/m1-runtime-role-check.sh' -Raw -Encoding UTF8).Replace("`r`n", "`n")
 $grantsSql = (Get-Content -LiteralPath 'database/security/m1_audit_runtime_grants.sql' -Raw -Encoding UTF8).Replace("`r`n", "`n")
@@ -10,6 +13,7 @@ $sql = (Get-Content -LiteralPath 'database/security/m1_create_private_database.s
 $scratchName = 'lms-scram-lab-' + [guid]::NewGuid().ToString('N')
 $scratchId = $null
 $bootstrapId = $null
+if ($HbaSnapshotPath) { $HbaSnapshotPath = (Resolve-Path -LiteralPath $HbaSnapshotPath).Path }
 
 function Invoke-Lab {
     param([string] $Command, [string] $InputText = '')
@@ -101,11 +105,21 @@ try {
     }
     if (-not $ready) { throw 'Isolated PostgreSQL was not ready.' }
 
+    if ($HbaSnapshotPath) {
+        docker cp $HbaSnapshotPath "${scratchId}:/tmp/lms_hba_rehearsal.conf"
+        if ($LASTEXITCODE -ne 0) { throw 'Could not copy HBA snapshot to synthetic server.' }
+        docker exec $scratchId chown postgres:postgres /tmp/lms_hba_rehearsal.conf
+        if ($LASTEXITCODE -ne 0) { throw 'Could not prepare synthetic snapshot ownership.' }
+        $rehearsal = Invoke-Lab 'cp /tmp/lms_hba_rehearsal.conf /var/lib/postgresql/data/pg_hba.conf && chmod 600 /var/lib/postgresql/data/pg_hba.conf && pg_ctl -D /var/lib/postgresql/data reload'
+        if ($rehearsal.Code -ne 0) { throw 'Could not load snapshot on synthetic server.' }
+        Start-Sleep -Seconds 1
+    }
+
     $baseline = Invoke-Lab 'unset PGPASSWORD; psql -X -w -U lms_user -d postgres -tAc "SELECT current_user"'
     Assert-Lab ($baseline.Code -eq 0 -and $baseline.Output -eq 'lms_user') 'Synthetic baseline socket trust confirmed'
     $setup = Invoke-Lab 'psql -X -v ON_ERROR_STOP=1 -U lms_user -d lms_saas -c "CREATE ROLE lms_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD ''synthetic-runtime-only''; CREATE TABLE synthetic_marker (id integer PRIMARY KEY); INSERT INTO synthetic_marker VALUES (1);"'
     Assert-Lab ($setup.Code -eq 0) 'Synthetic runtime and dump fixture created'
-    $backup = Invoke-Lab 'cp /var/lib/postgresql/data/pg_hba.conf /tmp/lab-hba-original.conf'
+    $backup = Invoke-Lab 'cp /var/lib/postgresql/data/pg_hba.conf /tmp/lms_hba_original.conf && chmod 600 /tmp/lms_hba_original.conf'
     Assert-Lab ($backup.Code -eq 0) 'Synthetic original HBA saved inside disposable container'
     docker cp $fixture "${scratchId}:/tmp/lab-hba-scram.conf"
     if ($LASTEXITCODE -ne 0) { throw 'Could not copy synthetic HBA fixture.' }
@@ -120,11 +134,26 @@ try {
     $noneTcp = Invoke-Lab 'unset PGPASSWORD; psql -X -w -h 127.0.0.1 -U lms_user -d postgres -tAc "SELECT current_user"'
     $ownerTcp = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -h 127.0.0.1 -U lms_user -d postgres -tAc "SELECT current_user"'
     Assert-Lab ($noneTcp.Code -ne 0 -and $ownerTcp.Code -eq 0 -and $ownerTcp.Output -eq 'lms_user') 'IPv4 loopback requires correct owner password'
+    $noneIpv6 = Invoke-Lab 'unset PGPASSWORD; psql -X -w -h ::1 -U lms_user -d postgres -tAc "SELECT current_user"'
+    $ownerIpv6 = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -h ::1 -U lms_user -d postgres -tAc "SELECT current_user"'
+    Assert-Lab ($noneIpv6.Code -ne 0 -and $ownerIpv6.Code -eq 0 -and $ownerIpv6.Output -eq 'lms_user') 'IPv6 loopback requires correct owner password'
     $runtime = Invoke-Lab 'export PGPASSWORD=synthetic-runtime-only; psql -X -w -h 127.0.0.1 -U lms_runtime -d lms_saas -tAc "SELECT current_user"'
     $wrongRuntime = Invoke-Lab 'export PGPASSWORD=synthetic-wrong; psql -X -w -h 127.0.0.1 -U lms_runtime -d lms_saas -tAc "SELECT current_user"'
     Assert-Lab ($runtime.Code -eq 0 -and $runtime.Output -eq 'lms_runtime' -and $wrongRuntime.Code -ne 0) 'Synthetic runtime credential succeeds and incorrect credential fails'
     $hba = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -U lms_user -d postgres -tAc "SELECT count(*) FROM pg_hba_file_rules WHERE error IS NOT NULL OR auth_method <> ''scram-sha-256''"'
     Assert-Lab ($hba.Code -eq 0 -and $hba.Output -eq '0') 'Synthetic HBA parses with only SCRAM rules'
+    $ruleScope = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -U lms_user -d postgres -tAc "SELECT count(*)::text || ''|'' || count(*) FILTER (WHERE ''replication'' = ANY(database) AND address = ''all'')::text FROM pg_hba_file_rules"'
+    Assert-Lab ($ruleScope.Code -eq 0 -and $ruleScope.Output -eq '7|0') 'Candidate preserves seven rules without opening remote physical replication'
+    $replication = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -U lms_user -d "replication=true" -c "IDENTIFY_SYSTEM"'
+    $replicationWithoutPassword = Invoke-Lab 'unset PGPASSWORD; psql -X -w -U lms_user -d "replication=true" -c "IDENTIFY_SYSTEM"'
+    $replicationWrongPassword = Invoke-Lab 'export PGPASSWORD=synthetic-wrong; psql -X -w -h 127.0.0.1 -U lms_user -d "replication=true" -c "IDENTIFY_SYSTEM"'
+    $replicationTcp = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -h 127.0.0.1 -U lms_user -d "replication=true" -c "IDENTIFY_SYSTEM"'
+    Assert-Lab ($replication.Code -eq 0 -and $replicationWithoutPassword.Code -ne 0 -and $replicationWrongPassword.Code -ne 0 -and $replicationTcp.Code -eq 0) 'Physical replication requires SCRAM on socket and IPv4 loopback'
+    $replicationIpv6 = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -h ::1 -U lms_user -d "replication=true" -c "IDENTIFY_SYSTEM"'
+    $replicationIpv6NoPassword = Invoke-Lab 'unset PGPASSWORD; psql -X -w -h ::1 -U lms_user -d "replication=true" -c "IDENTIFY_SYSTEM"'
+    Assert-Lab ($replicationIpv6.Code -eq 0 -and $replicationIpv6NoPassword.Code -ne 0) 'Physical replication requires SCRAM on IPv6 loopback'
+    $replicationRuntime = Invoke-Lab 'export PGPASSWORD=synthetic-runtime-only; psql -X -w -h 127.0.0.1 -U lms_runtime -d "replication=true" -c "IDENTIFY_SYSTEM"'
+    Assert-Lab ($replicationRuntime.Code -ne 0 -and $replicationRuntime.Output -match 'replication') 'Runtime remains unable to start physical replication'
     $health = Invoke-Lab 'unset PGPASSWORD; pg_isready -q -h 127.0.0.1 -U lms_user -d lms_saas'
     Assert-Lab ($health.Code -eq 0) 'Readiness probe works without authenticating credentials'
 
@@ -171,9 +200,36 @@ try {
     $resultAgain = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -U lms_user -d lms_restore_scram_lab -tAc "SELECT count(*) FROM synthetic_marker"'
     Assert-Lab ($repeatRestore.Code -ne 0 -and $resultAgain.Code -eq 0 -and $resultAgain.Output -eq '1') 'Restore refuses a nonempty database and preserves its data'
 
-    $rollback = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; cp /tmp/lab-hba-original.conf /var/lib/postgresql/data/pg_hba.conf && psql -X -w -U lms_user -d postgres -tAc "SELECT pg_reload_conf()"'
-    Assert-Lab ($rollback.Code -eq 0 -and $rollback.Output -eq 't') 'Synthetic original HBA rollback requested'
+    $originalHash = Invoke-Lab 'sha256sum /tmp/lms_hba_original.conf'
+    $currentHash = Invoke-Lab 'sha256sum /var/lib/postgresql/data/pg_hba.conf'
+    if ($originalHash.Code -ne 0 -or $currentHash.Code -ne 0) { throw 'Could not hash synthetic HBA.' }
+    $originalSha = $originalHash.Output.Split(' ')[0]
+    $currentSha = $currentHash.Output.Split(' ')[0]
+    if ($HbaSnapshotPath) {
+        Assert-Lab ($originalSha -eq (Get-FileHash -LiteralPath $HbaSnapshotPath -Algorithm SHA256).Hash.ToLowerInvariant()) 'Rehearsal uses the exact saved local HBA snapshot'
+    }
+    if ($PSVersionTable.PSVersion.Major -lt 7) { $rollbackScript = $rollbackScript.Replace('"', '\"') }
+    $savedPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $badHashOutput = @(docker exec -u postgres $scratchId sh -c $rollbackScript -- /tmp/lms_hba_original.conf ('0' * 64) $currentSha 2>&1 | ForEach-Object { $_.ToString() })
+        $badHashCode = $LASTEXITCODE
+        $driftOutput = @(docker exec -u postgres $scratchId sh -c $rollbackScript -- /tmp/lms_hba_original.conf $originalSha ('0' * 64) 2>&1 | ForEach-Object { $_.ToString() })
+        $driftCode = $LASTEXITCODE
+    } finally { $ErrorActionPreference = $savedPreference }
+    $afterRejection = Invoke-Lab 'sha256sum /var/lib/postgresql/data/pg_hba.conf'
+    Assert-Lab ($badHashCode -ne 0 -and $driftCode -ne 0 -and $afterRejection.Output -eq $currentHash.Output) 'Rollback rejects corrupt backup and changed HBA without modifying configuration'
+    $savedPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $rollbackOutput = @(docker exec -u postgres $scratchId sh -c $rollbackScript -- /tmp/lms_hba_original.conf $originalSha $currentSha 2>&1 | ForEach-Object { $_.ToString() })
+        $rollbackCode = $LASTEXITCODE
+    } finally { $ErrorActionPreference = $savedPreference }
+    Assert-Lab ($rollbackCode -eq 0) 'Actual rollback script restores HBA and reloads without database credentials'
     Start-Sleep -Seconds 1
+    $restoredHash = Invoke-Lab 'sha256sum /var/lib/postgresql/data/pg_hba.conf'
+    $restoredMode = Invoke-Lab 'stat -c %a:%U:%G /var/lib/postgresql/data/pg_hba.conf'
+    Assert-Lab ($restoredHash.Output.Split(' ')[0] -eq $originalSha -and $restoredMode.Output -eq '600:postgres:postgres') 'Rollback restores exact bytes and postgres ownership with mode 600'
     $after = Invoke-Lab 'unset PGPASSWORD; psql -X -w -U lms_user -d postgres -tAc "SELECT current_user"'
     if ($after.Code -ne 0 -or $after.Output -ne 'lms_user') {
         $rules = Invoke-Lab 'export PGPASSWORD="$POSTGRES_PASSWORD"; psql -X -w -U lms_user -d postgres -tAc "SELECT line_number, type, auth_method, error FROM pg_hba_file_rules"'
