@@ -190,6 +190,13 @@ pemulihan setelah review. Jangan edit katalog sistem secara langsung.
 
 Uji helper dengan data sintetis di PostgreSQL sementara tanpa jaringan/volume persisten:
 `./tests/Support/m1-private-database-test.ps1`. Uji ini tidak membuat atau me-restore database pengguna.
+Job GitHub Actions `private-database-helper` menjalankan uji yang sama dengan PowerShell pada runner Linux;
+hasil GitHub baru tersedia setelah perubahan di-commit dan di-push oleh pengguna.
+
+Lab `./tests/Support/m1-scram-synthetic-test.ps1` menguji usulan SCRAM, bootstrap, dump/restore, dan rollback
+pada container sementara tanpa jaringan. Fixture `m1-hba-scram-synthetic.conf` **hanya untuk lab**, bukan konfigurasi
+siap pakai untuk server aktif. Lab tidak mengubah autentikasi PostgreSQL lokal atau membuktikan seluruh operasi aplikasi;
+hasil dan batasannya dicatat dalam `docs/runbooks/M1_ARCHITECTURE_GATE.md`.
 
 ### Runbook pilot M1 — belum siap data nyata
 

@@ -315,6 +315,33 @@ migration/test, backup/restore, serta rollback `pg_hba` di PostgreSQL sintetis; 
 konfigurasi sebelum perubahan lokal. Perubahan autentikasi aktual memerlukan persetujuan pemilik dan tidak dilakukan
 oleh pekerjaan ini.
 
+**Hasil lab sintetis 2026-11-23 — rancangan masih belum disetujui untuk server aktif.**
+`tests/Support/m1-scram-synthetic-test.ps1` lulus 15 pemeriksaan pada dua PostgreSQL 17 sementara tanpa jaringan
+atau volume persisten. Pengujian mencakup reload fixture SCRAM, password owner/runtime benar dan salah, socket dan
+loopback IPv4, SQL pembuatan database privat yang sama, dump/restore sintetis dengan penolakan runtime, serta
+rollback ke HBA awal. Cluster kedua menggunakan autentikasi SCRAM sejak `initdb` dan menjalankan init script database
+test yang sebenarnya. Kedua container dan data sementaranya dihentikan/dihapus otomatis setelah uji.
+`pg_isready` tetap berhasil tanpa password: probe ini mengukur kesiapan server, **bukan** validitas credential.
+
+Rancangan yang perlu direview: gunakan SCRAM untuk koneksi socket dan loopback setelah menginventarisasi seluruh rule
+HBA aktual dan proses operator, dengan credential melalui kanal privat yang tidak muncul di argumen atau log. Jangan
+menyalin fixture lab ke server aktif: aturan jaringan, replikasi, urutan first-match, hak akses dan owner file harus
+disesuaikan serta direview. Simpan backup konfigurasi yang dapat dibaca PostgreSQL dan siapkan sesi operator pemulihan
+yang telah diautentikasi; reload hanya setelah validasi rule dan rencana rollback. Dalam lab, backup HBA yang disalin
+sebagai root menjadi tidak terbaca PostgreSQL dan rollback gagal sampai pengujian mempertahankan akses user postgres.
+Reload yang dilaporkan berhasil saja tidak membuktikan rule aktif; uji koneksi positif/negatif setelah reload.
+
+Khususnya `scripts/m1-create-private-database.ps1`, langkah grant ulang dalam `scripts/m1-operator.ps1`/`.sh`,
+`scripts/m1-prepare-runtime.ps1`, perintah `psql`/dump/restore di README dan probe yang memakai socket saat ini masih
+perlu penyesuaian dan pengujian sebelum perubahan live. Lab belum menguji wrapper Windows terhadap SCRAM, proses
+migration/test Laravel, aplikasi multi-tenant, loopback IPv6, koneksi jaringan container lain, atau bootstrap dengan
+secret owner lokal yang sebenarnya. Kredensial lab tidak dipakai di server pengguna. Perubahan `pg_hba` aktif,
+adaptasi operator, serta prosedur pemulihan nyata memerlukan persetujuan pengguna tersendiri.
+
+Workflow `.github/workflows/m0-ci.yml` kini menambahkan job terpisah untuk `m1-private-database-test.ps1` dengan
+image PostgreSQL 17 dan data sintetis. Uji tersebut lulus lokal 27 pemeriksaan pada Windows PowerShell; job pada
+GitHub Actions/Linux belum dijalankan dan tidak boleh dicatat lulus sebelum ada hasil aktual.
+
 ```text
 Audit database hardening design: [x] Approved — reviewer: user (chat approval), date: 2026-11-21
 Implementation: local rollout verified — not production approval; PR6 remains under review.
