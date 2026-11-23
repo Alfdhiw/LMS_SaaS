@@ -2,10 +2,12 @@
 # owner secret has been moved outside the application bind mount.
 services:
   db:
+    entrypoint: ["/bin/sh", "/opt/lms/audit-local-db-entrypoint.sh"]
     environment:
       POSTGRES_USER: lms_user
       POSTGRES_PASSWORD: null
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_owner_password
+    volumes:
+      - ./docker/postgres/audit-local-db-entrypoint.sh:/opt/lms/audit-local-db-entrypoint.sh:ro
     secrets:
       - postgres_owner_password
 

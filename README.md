@@ -47,11 +47,11 @@ Jika kebijakan PowerShell melarang eksekusi skrip, jalankan perintah yang sama s
 # Status semua service
 docker compose ps
 
-# Semua tes
-docker compose exec -T app php artisan test
+# Semua tes pada instalasi lokal dengan pemisahan role audit
+.\scripts\m1-operator.ps1 test
 
-# Pemeriksaan khusus M0
-docker compose exec -T app php artisan test --filter=M0
+# Pemeriksaan khusus M0 pada instalasi lokal dengan pemisahan role audit
+.\scripts\m1-operator.ps1 test-m0
 
 # Formatter (ubah file otomatis)
 docker compose exec -T app ./vendor/bin/pint
@@ -73,6 +73,9 @@ docker compose down
 ```
 
 **Peringatan:** `docker compose down -v` menghapus seluruh volume database dan Redis lokal. Jangan gunakan jika ada data yang masih diperlukan.
+
+Perintah operator di atas membutuhkan override lokal dan secret owner yang dijelaskan pada bagian hardening audit.
+Pada baseline M0/CI yang belum menggunakan pemisahan role, tes tetap memakai `docker compose exec -T app php artisan test`.
 
 Frontend Vite belum diperlukan pada M0; setelah modul UI disetujui, jalankan `docker compose --profile assets up -d vite`. Sesuaikan aplikasi bila hot reload di Windows perlu konfigurasi HMR.
 
@@ -124,11 +127,69 @@ Script memakai role dan data sintetis dalam transaksi yang di-rollback; memerluk
 dan akan menolak database lain. Ini hanya menguji rancangan hak, **bukan** bukti bahwa role aplikasi saat ini sudah
 terlindungi. Usulan pemisahan role dan status review dicatat di `docs/runbooks/M1_ARCHITECTURE_GATE.md`.
 
-Rancangan pemisahan role telah disetujui, tetapi rollout lokal **belum selesai**: aplikasi masih menggunakan role
-owner/superuser. Skrip `database/security/m1_audit_runtime_grants.sql` baru diuji melalui transaksi rollback di
-database test. Uji ulang menggunakan `./tests/Support/m1_audit_runtime_grants_test.ps1`; jangan menerapkan grant atau
-template `docker/compose.audit-local.override.yml` ke lingkungan aktif sampai kredensial operator terpisah, jalur
-migration/test, dan langkah rollout/rollback siap serta telah diverifikasi.
+Pada lingkungan lokal yang telah dikonfigurasi, app, worker, dan scheduler memakai `lms_runtime`; hanya `SELECT` dan
+`INSERT` diberikan pada kedua tabel audit. Kredensial owner berada di direktori privat `.lms-saas-secrets` di luar
+mount aplikasi; `.env` hanya berisi kredensial runtime. Override lokal `docker-compose.override.yml` tidak dilacak Git.
+Jangan bagikan atau commit `.env`, direktori secret, salinan `.env` lama, maupun backup database.
+
+Untuk lokal Windows yang sudah dikonfigurasi, jalankan migration menggunakan `./scripts/m1-operator.ps1 migrate`,
+seed menggunakan `./scripts/m1-operator.ps1 seed`, dan tes menggunakan `./scripts/m1-operator.ps1 test`. Jalur
+migration menerapkan ulang grant pada tabel yang ada; tanpa langkah ini tabel baru tidak otomatis dapat diakses runtime.
+Jangan simpan data yang perlu dipertahankan pada database test. Untuk memeriksa koneksi dan hak audit runtime, jalankan
+`docker compose exec -T app php scripts/m1-check-runtime.php`; uji grant sintetis pada database test dapat diulang
+dengan `./tests/Support/m1_audit_runtime_grants_test.ps1`. Jika web memberi 502 setelah kontainer app dibuat ulang,
+jalankan `docker compose restart web` untuk memperbarui alamat upstream, lalu ulangi host smoke.
+
+Uji integrasi aplikasi sebagai role runtime dapat dijalankan di Windows dengan:
+
+```powershell
+.\tests\Support\m1-runtime-integration.ps1
+```
+
+Skrip membuat jaringan Docker internal dan PostgreSQL sementara berbasis memori; tidak memakai database utama atau
+secret lokal. Owner dan role runtime pada server sementara memakai kredensial sintetis. Proyek di-mount read-only,
+file `.env` diganti fixture sintetis, dan storage sementara berada di memori. Tes memeriksa penanda isolasi sebelum
+migration, lalu menguji login, sesi lintas tenant, provisioning/aktivasi, dan audit melalui koneksi runtime. Server
+dan jaringan sementara dibersihkan setelah tes. Tes ini tidak termasuk suite default `php artisan test`; jalankan
+perintah di atas secara eksplisit. Tes ini tidak menggantikan uji HTTPS atau membuktikan RLS.
+
+Setup M0/CI standar belum otomatis membuat role dan secret terpisah pada instalasi baru; jangan menganggap template
+override saja cukup untuk instalasi baru atau produksi. Grant DML pada tabel non-audit masih luas, dan owner/superuser
+masih dapat mengubah audit. Perubahan ini belum merupakan bukti kesiapan produksi atau RLS; lihat status dan batasannya
+di `docs/runbooks/M1_ARCHITECTURE_GATE.md`.
+
+Pada server lokal yang telah direview, `CONNECT` dari `PUBLIC` dicabut untuk `lms_saas_test`,
+`lms_saas_restore_drill`, `postgres`, dan `template1`. Runtime tetap dapat mengakses `lms_saas`, tetapi tidak dapat
+membuka koneksi baru ke empat database tersebut; owner `lms_user` tetap dapat terhubung. Pembatasan dari `PUBLIC`
+berlaku juga untuk role lain, yang memerlukan grant eksplisit atau hak administratif yang sesuai. Izin `TEMP`, ACL
+`lms_saas`, dan `template0` tidak diubah. Koneksi yang sudah ada tidak otomatis diputus oleh perubahan ACL.
+
+Pembatasan ini hanya mencakup empat database yang telah disebut; database baru, termasuk target restore baru, perlu
+dibuat melalui helper lokal yang ditinjau di bawah. Jangan menganggap database yang dibuat dengan cara lain otomatis
+dibatasi. Lihat catatan preflight, verifikasi, dan pemulihan akses di `docs/runbooks/M1_ARCHITECTURE_GATE.md`;
+setiap perubahan izin tambahan memerlukan review dampak dan persetujuan pemilik.
+
+Untuk database restore atau tambahan **baru** pada instalasi Windows lokal yang sudah menggunakan role terpisah:
+
+```powershell
+# Pratinjau: tidak membuat database
+.\scripts\m1-create-private-database.ps1 -DatabaseName lms_restore_contoh_01 -WhatIf
+
+# Setelah nama/tujuan dan operasi disetujui, jalankan lagi tanpa -WhatIf
+.\scripts\m1-create-private-database.ps1 -DatabaseName lms_restore_contoh_01
+```
+
+Nama wajib unik, huruf kecil/angka/underscore, dan diawali `lms_restore_` atau `lms_aux_`. `-WhatIf` memeriksa target
+Docker dan konfigurasi lokal tetapi belum memeriksa apakah nama database sudah ada. Helper menolak target yang
+sudah ada dan memverifikasi Docker Desktop lokal, volume, owner serta role runtime. Database dibuat dengan koneksi
+tertutup, lalu `CONNECT` dari `PUBLIC` dicabut dan diverifikasi dalam transaksi sebelum koneksi dibuka. Hanya database
+baru yang dibuat helper ini yang dicakup; izin `TEMP` tidak diubah. Jika proses gagal, **jangan menghapus atau mencoba
+ulang secara buta**: database mungkin sudah dibuat. Kegagalan sebelum commit membuatnya tetap tertutup; jika hasil
+commit tidak diketahui, statusnya perlu diperiksa. Periksa `pg_database.datallowconn`, ACL, dan log operator; tentukan
+pemulihan setelah review. Jangan edit katalog sistem secara langsung.
+
+Uji helper dengan data sintetis di PostgreSQL sementara tanpa jaringan/volume persisten:
+`./tests/Support/m1-private-database-test.ps1`. Uji ini tidak membuat atau me-restore database pengguna.
 
 ### Runbook pilot M1 — belum siap data nyata
 
@@ -189,9 +250,11 @@ database hasil restore; salinan lama bisa berisi undangan, sesi, dan status otor
    Windows ke akun operator, SYSTEM, dan administrator yang berwenang. Dump **tidak terenkripsi**, berisi seluruh
    tenant serta kemungkinan hash credential/token: jangan commit, bagikan ke sekolah, atau unggah ke layanan publik.
 3. Salin kembali file Windows ke nama sementara baru di container dan verifikasi SHA-256 kembali. Hanya setelah target
-   database baru dipastikan belum ada, buat menggunakan `createdb`; restore menggunakan `pg_restore --exit-on-error
-   --no-owner --no-acl` ke nama database latihan tersebut. Opsi ini tidak membuktikan pemulihan owner/grant asli;
-   restore produksi memerlukan rancangan dan pengujian hak akses tersendiri. Periksa exit code setiap perintah.
+   baru dipastikan belum ada dan disetujui, buat dengan `scripts/m1-create-private-database.ps1` seperti di atas;
+   **jangan gunakan `createdb` biasa** pada prosedur lokal yang sudah memakai role terpisah. Periksa ACL dan bahwa
+   runtime ditolak sebelum restore. Gunakan `pg_restore --exit-on-error --no-owner --no-acl` ke target baru tersebut.
+   Opsi ini tidak membuktikan pemulihan owner/grant asli; restore produksi memerlukan rancangan dan pengujian hak akses
+   tersendiri. Periksa exit code setiap perintah dan ulangi verifikasi akses sesudah restore.
 4. Bandingkan tabel dan jumlah baris, migration, struktur/constraint/index, sequence, serta data yang diperlukan.
    Periksa integritas relasi tenant dan uji negatif lintas tenant **hanya pada hasil restore**, dengan transaksi yang
    tidak meninggalkan perubahan. Bila data sumber berubah selama backup/validasi, perbandingan langsung dapat berbeda;

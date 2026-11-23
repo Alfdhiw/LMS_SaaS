@@ -10,6 +10,11 @@ docker compose build app
 docker compose up -d db redis mailpit
 docker compose run --rm --no-deps --entrypoint sh app scripts/bootstrap-laravel.sh
 docker compose up -d app web worker scheduler
-docker compose exec -T app php artisan migrate --force
-docker compose exec -T app php artisan test --filter=M0
+if grep -qE '^DB_USERNAME=lms_runtime[[:space:]]*$' .env; then
+  sh scripts/m1-operator.sh migrate
+  sh scripts/m1-operator.sh test-m0
+else
+  docker compose exec -T app php artisan migrate --force
+  docker compose exec -T app php artisan test --filter=M0
+fi
 printf '\n[M0] Open http://localhost:8080 and Mailpit http://localhost:8025\n'

@@ -42,14 +42,20 @@ if ($LASTEXITCODE -ne 0) { throw 'Bootstrap Laravel gagal.' }
 docker compose up -d app web worker scheduler
 if ($LASTEXITCODE -ne 0) { throw 'Service Laravel gagal berjalan.' }
 
-docker compose exec -T app php artisan migrate --force
-if ($LASTEXITCODE -ne 0) { throw 'Migrasi baseline Laravel gagal.' }
+if (Select-String -Quiet -Path '.env' -Pattern '^DB_USERNAME=lms_runtime\s*$') {
+    & "$PSScriptRoot/m1-operator.ps1" migrate
+    & "$PSScriptRoot/m1-operator.ps1" seed
+    & "$PSScriptRoot/m1-operator.ps1" test-m0
+} else {
+    docker compose exec -T app php artisan migrate --force
+    if ($LASTEXITCODE -ne 0) { throw 'Migrasi baseline Laravel gagal.' }
 
-docker compose exec -T app php artisan db:seed --force
-if ($LASTEXITCODE -ne 0) { throw 'Seed katalog role dan permission gagal.' }
+    docker compose exec -T app php artisan db:seed --force
+    if ($LASTEXITCODE -ne 0) { throw 'Seed katalog role dan permission gagal.' }
 
-docker compose exec -T app php artisan test --filter=M0
-if ($LASTEXITCODE -ne 0) { throw 'M0 smoke test gagal.' }
+    docker compose exec -T app php artisan test --filter=M0
+    if ($LASTEXITCODE -ne 0) { throw 'M0 smoke test gagal.' }
+}
 
 Write-Host ''
 Write-Host '[M0] Setup selesai. Buka http://localhost:8080 dan http://localhost:8025'

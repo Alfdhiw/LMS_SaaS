@@ -179,13 +179,12 @@ Tidak ada persetujuan otomatis untuk PR6 atau tahap berikutnya.
 Catatan: angka database dan pilot pada bagian PR6 di atas adalah bukti historis saat review itu ditulis; setelahnya
 pengguna membuat sekolah sintetis dan latihan backup/restore lokal telah dicatat di `README.md`.
 
-## Hardening audit PostgreSQL — rancangan disetujui, implementasi belum selesai
+## Hardening audit PostgreSQL — diterapkan lokal, gate produksi masih terbuka
 
-Pada pemeriksaan lokal, koneksi aplikasi memakai `lms_user`; role tersebut adalah **superuser** dan pemilik kedua tabel
-audit. Karena itu `REVOKE` dari role tersebut tidak menghasilkan batas keamanan yang efektif. Tabel audit saat ini
-belum dijamin append-only di level hak PostgreSQL. Baseline ADR-001 mengarahkan role request non-superuser/non-owner;
-rancangan penerapan di bawah disetujui pengguna melalui percakapan pada 2026-11-21, tetapi **belum diterapkan** dan
-tidak mengubah status approval PR6.
+Pada pemeriksaan awal, koneksi aplikasi memakai `lms_user`; role tersebut adalah **superuser** dan pemilik kedua tabel
+audit, sehingga `REVOKE` dari role tersebut tidak efektif. Baseline ADR-001 mengarahkan role request non-superuser/
+non-owner. Rancangan di bawah disetujui pengguna melalui percakapan pada 2026-11-21 dan diterapkan pada lingkungan
+lokal pada 2026-11-22; ini tidak mengubah status approval PR6 atau membuktikan kesiapan produksi.
 
 Rancangan yang disetujui pengguna:
 
@@ -211,24 +210,114 @@ ditolak saat `UPDATE`, `DELETE`, `TRUNCATE`, atau mengubah trigger pada kedua ta
 membership tenant lain. Uji terhadap database `postgres` ditolak oleh guard. Role percobaan dan baris sintetis tidak
 tersisa. Percobaan awal memakai sequence di database test yang kosong sehingga nomor sequence maju meskipun transaksi
 di-rollback; script yang disimpan memakai ID eksplisit dan uji ulang membuktikan sequence tidak berubah. Database
-aplikasi tidak menjadi target dan role runtime aktual belum dibatasi.
+aplikasi tidak menjadi target pada proof of concept tersebut.
 
 **Persiapan penerapan:** backup lokal baru diverifikasi dengan checksum. Skrip
 `database/security/m1_audit_runtime_grants.sql` dan template `docker/compose.audit-local.override.yml` disiapkan;
 `tests/Support/m1_audit_runtime_grants_test.ps1` menguji grant dengan role sintetis pada `lms_saas_test` dan rollback.
 Uji positif `SELECT`/`INSERT`, penolakan `UPDATE`/`DELETE`/`TRUNCATE`/`ALTER`, akses sequence, dan penolakan pembuatan
-objek schema lulus. Guard menolak target `postgres`. Template Docker lulus `config --quiet` tanpa diterapkan.
+objek schema lulus. Guard menolak target `postgres`. Template Docker lulus `config --quiet`.
 Skrip grant saat ini memberikan DML untuk tabel aplikasi non-audit yang sudah ada dan bukan bukti least-privilege
 per modul; tidak ada default grant untuk tabel baru, sehingga proses deployment harus memperbarui dan menguji grant
 setelah migration sebelum dialihkan ke runtime.
-Pemeriksaan keamanan alat menolak langkah pemindahan kredensial owner karena berpotensi menampilkan password dalam
-output; kredensial belum dipindahkan, role runtime belum dibuat, grant belum diterapkan, `.env` dan koneksi aplikasi
-belum diubah. Pemilik harus menyiapkan kredensial secara privat tanpa memberikannya melalui chat sebelum rollout
-diteruskan. File sementara backup di container dibersihkan setelah salinan Windows diverifikasi.
+Pemeriksaan keamanan alat menolak langkah yang berpotensi menampilkan password dalam output; kredensial kemudian
+disiapkan secara privat di luar mount aplikasi tanpa dikirim melalui chat. Pada 2026-11-22 backup lokal baru telah
+dibuat dan checksum diverifikasi; role `lms_runtime` telah dibuat dan grant diterapkan pada database lokal. Pengujian
+atribut role dan hak kedua tabel audit lulus. Pemilik mengubah `.env` secara privat. App, worker dan scheduler telah
+dibuat ulang dan masing-masing terverifikasi terhubung sebagai `lms_runtime`; file secret owner tidak di-mount ke
+ketiganya. Operator migration berjalan tanpa migration tertunda dan menerapkan ulang grant. Volume PostgreSQL tetap
+sama; jumlah tenant dan user sintetis setelah restart adalah tiga dan empat.
+
+Setelah pengalihan, `scripts/m1-operator.ps1 test` lulus 75 test/513 assertion menggunakan owner pada database test;
+pengujian ini bukan bukti seluruh alur mutasi aplikasi sudah diuji dengan role runtime. Pemeriksaan runtime pada app,
+worker dan scheduler lulus, tes grant sintetis rollback lulus, serta host smoke HTTP lulus untuk central, tiga tenant,
+host tak dikenal, dan loopback. Pint lulus untuk 109 file; `composer validate --no-check-publish` lulus.
+
+Pada 2026-11-23, `tests/Support/m1-runtime-integration.ps1` lulus 2 tes/43 assertion pada PostgreSQL tmpfs dan jaringan
+Docker internal yang terpisah dari server utama. Server dan kredensialnya sintetis; guard grant diadaptasi hanya untuk
+nama database test. Schema dan fixture disiapkan owner, lalu Laravel benar-benar login sebagai `lms_runtime`. Cakupan:
+penolakan marker isolasi salah, login dua sekolah dan central, penolakan sesi lintas tenant, provisioning idempotent,
+aktivasi terikat host, pencatatan kedua audit, serta penolakan UPDATE/DELETE audit dan pemeriksaan hak TRUNCATE.
+Kontainer dan jaringan sementara dibersihkan. MFA dinonaktifkan hanya pada aplikasi uji ini; tes tidak membuktikan
+browser HTTPS, perilaku seluruh job/worker, seluruh grant modul, atau isolasi RLS.
+
+Selama rollout, penggantian entrypoint Compose menghilangkan command bawaan image dan menyebabkan PostgreSQL restart
+berulang. Entrypoint diperbaiki agar default ke `postgres` jika tidak ada argumen; database kembali sehat tanpa menghapus
+volume. Setelah app dibuat ulang, HTTP sempat 502; restart web memuat ulang alamat upstream. Backup sebelum rollout
+tersedia pada `storage/app/private/backups/lms-saas-pre-role-20261122-005616.dump`; backup mengandung data seluruh tenant
+dan harus tetap privat. Restore drill sebelumnya tidak menguji backup khusus ini setelah role baru dibuat.
+
+Pembatasan ini tidak melindungi dari owner/superuser atau event palsu yang di-INSERT oleh runtime. Grant non-audit masih
+luas, RLS tidak diterapkan oleh pekerjaan ini, dan instalasi baru/CI belum otomatis menyiapkan pemisahan role. Uji
+browser HTTPS, restore drill dengan role baru, serta review produksi tetap terbuka.
+
+### Pembatasan CONNECT database lokal — diterapkan untuk empat database
+
+Pengguna menyetujui melalui chat pembatasan koneksi pada empat database lokal yang sudah ada; `TEMP` dan ACL
+`lms_saas` tidak termasuk perubahan. Sebelum perubahan pada 2026-11-23, metadata ACL yang dicatat adalah:
+
+| Database | `datacl` awal |
+|---|---|
+| `lms_saas` | `{=Tc/lms_user,lms_user=CTc/lms_user,lms_runtime=c/lms_user}` |
+| `lms_saas_test` | `NULL` (default PostgreSQL) |
+| `lms_saas_restore_drill` | `NULL` (default PostgreSQL) |
+| `postgres` | `NULL` (default PostgreSQL) |
+| `template1` | `{=c/lms_user,lms_user=CTc/lms_user}` |
+| `template0` | `{=c/lms_user,lms_user=CTc/lms_user}`; koneksi dinonaktifkan |
+
+`lms_user` adalah owner/superuser, tidak ada role login non-sistem selain `lms_user` dan `lms_runtime`, dan tidak ada
+koneksi klien aktif ke empat target saat preflight. Tiga tenant dan empat user sintetis ada pada database aplikasi;
+checksum backup sebelum pemisahan role masih cocok. Untuk pemulihan akses efektif jika rollout gagal setelah commit,
+operator berwenang dapat memberikan kembali `CONNECT` kepada `PUBLIC` hanya pada empat database yang dicabut dan
+memverifikasi seluruh hak. `GRANT` ulang dapat menghasilkan ACL eksplisit, sehingga tidak menjamin representasi
+`datacl` kembali `NULL`; jangan mengubah katalog sistem secara langsung untuk memaksakan bentuk ACL lama.
+
+Setelah persetujuan pengguna pada 2026-11-23, satu transaksi dengan guard awal/akhir mencabut `CONNECT` dari
+`PUBLIC` hanya pada `lms_saas_test`, `lms_saas_restore_drill`, `postgres`, dan `template1`. ACL `lms_saas`,
+`template0`, dan hak `TEMP` tetap seperti preflight. Koneksi baru menggunakan kredensial runtime benar-benar
+ditolak pada empat target dan berhasil pada `lms_saas`; koneksi baru owner melalui kontainer operator sementara
+berhasil pada kelima database. Koneksi yang sudah ada tidak otomatis diputus; preflight tidak menemukan klien
+aktif pada empat target. App, worker, dan scheduler masing-masing lolos verifikasi runtime/audit; host smoke HTTP
+lulus untuk central, tiga tenant, unknown host dan loopback. Operator `test-m0` lulus 3 test/6 assertion; tes
+integrasi lintas tenant pada PostgreSQL sintetis terisolasi lulus 2 test/43 assertion. Tes terakhir menggunakan
+server sementara dan tidak membuktikan seluruh alur mutasi terhadap database aplikasi lokal.
+
+Perubahan `PUBLIC` memengaruhi semua role, bukan hanya runtime; role tambahan perlu grant eksplisit yang direview.
+Database yang dibuat berikutnya tidak otomatis dicakup oleh perubahan empat database ini. Autentikasi `trust`
+socket/loopback di dalam kontainer PostgreSQL belum diubah; akses shell kontainer database tetap administratif.
+
+### Perlindungan database baru dan review autentikasi lokal
+
+Helper Windows `scripts/m1-create-private-database.ps1` dan SQL `database/security/m1_create_private_database.sql`
+disiapkan untuk database `lms_restore_*` dan `lms_aux_*` yang belum ada. Wrapper membatasi Docker Desktop lokal,
+label Compose, volume, dan konfigurasi target. SQL membuat database dengan `ALLOW_CONNECTIONS false`, lalu mencabut
+`CONNECT` dari `PUBLIC`, memeriksa hak runtime dan owner, serta membuka database dalam transaksi. Jika transaksi gagal,
+database baru tetap tertutup dan tidak dihapus otomatis. Ini tidak mengubah database existing, tidak mencakup database
+yang dibuat dengan tool lain, dan tidak mengubah `TEMP`; lihat langkah serta batasan di README.
+
+Pada 2026-11-23, `tests/Support/m1-private-database-test.ps1` lulus 27 pemeriksaan pada PostgreSQL sintetis tanpa
+jaringan dan tanpa volume persisten. SQL yang sama diuji untuk pembuatan dua jenis database, penolakan nama/role tidak
+aman dan target existing, kegagalan sebelum maupun sesudah `ALTER DATABASE`, serta `pg_dump`/`pg_restore` sintetis.
+Owner berhasil terhubung; runtime ditolak sebelum dan sesudah restore; database sumber dan target existing tetap utuh.
+`-WhatIf` wrapper lokal lulus dan database pratinjau tidak dibuat. Uji ini tidak menjalankan helper untuk membuat
+database baru pada server pengguna dan tidak membuktikan restore backup lokal yang sebenarnya.
+
+Review `pg_hba` pada server lokal menunjukkan `trust` untuk socket dan loopback di dalam kontainer PostgreSQL dan
+`scram-sha-256` untuk koneksi jaringan. Percobaan read-only sebagai runtime tanpa password berhasil lewat socket
+dan loopback; dari kontainer aplikasi, password sintetis yang salah ditolak. Ini berarti akses menjalankan proses
+di kontainer database harus dianggap administratif: aturan `trust` dapat mengizinkan identitas database tanpa
+password sesuai hak database. Tidak ada uji penyamaran owner pada server aktif dan aturan `pg_hba` belum diubah.
+
+**Usulan untuk review, belum disetujui:** sebelum mengganti `trust`, inventarisasi dan adaptasi semua operator yang
+menggunakan socket (`psql`, grant ulang, init, dump/restore, probe dan helper ini), dengan secret owner privat tanpa
+password pada argumen atau log. Uji perubahan, kegagalan credential, bootstrap database baru, healthcheck,
+migration/test, backup/restore, serta rollback `pg_hba` di PostgreSQL sintetis; siapkan akses pemulihan dan backup
+konfigurasi sebelum perubahan lokal. Perubahan autentikasi aktual memerlukan persetujuan pemilik dan tidak dilakukan
+oleh pekerjaan ini.
 
 ```text
 Audit database hardening design: [x] Approved — reviewer: user (chat approval), date: 2026-11-21
-Implementation: incomplete — role runtime dan konfigurasi koneksi belum diterapkan.
+Implementation: local rollout verified — not production approval; PR6 remains under review.
 ```
 
 Setelah perubahan keputusan, update status di dokumen asli dan `docs/DOCUMENT_INDEX.md`; simpan riwayat, jangan hapus versi lama. Draft migration disesuaikan jika review mengubah schema.
