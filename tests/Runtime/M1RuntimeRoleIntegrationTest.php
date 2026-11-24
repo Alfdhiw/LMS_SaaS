@@ -127,6 +127,19 @@ final class M1RuntimeRoleIntegrationTest extends TestCase
             'password' => 'Synthetic-Admin!234', 'password_confirmation' => 'Synthetic-Admin!234',
         ])->assertNotFound();
 
+        // Existing active-school credentials exercise the new path as the non-owner role.
+        $this->postWithCsrf('http://runtime-a.platform.test/login', [
+            'username' => 'admin', 'password' => 'Synthetic-A!234',
+        ])->assertRedirect('/dashboard');
+        $this->postWithCsrf('http://runtime-a.platform.test/password/change', [
+            'current_password' => 'Synthetic-A!234', 'password' => 'Synthetic-Changed!234',
+            'password_confirmation' => 'Synthetic-Changed!234',
+        ])->assertRedirect('/login');
+        $this->assertDatabaseHas('users', ['id' => $userA, 'auth_version' => 2]);
+        $this->assertTrue(Hash::check('Synthetic-Changed!234', DB::table('users')->where('id', $userA)->value('password')));
+        $this->assertDatabaseHas('tenant_audit_logs', ['tenant_id' => $schoolA, 'action' => 'auth.password.changed']);
+        $this->assertDatabaseHas('users', ['id' => $userB, 'auth_version' => 1]);
+
         $this->assertAuditMutationsDenied();
     }
 

@@ -4,8 +4,10 @@ namespace App\Modules\Identity\Services;
 
 use App\Models\User;
 use App\Modules\Identity\Support\IdentityNormalizer;
-use App\Modules\Tenancy\Data\TenantContext;
+use App\Modules\Tenancy\Contracts\TenantRegistry;
 use App\Support\Audit\AuthAuditLogger;
+use App\Support\Auth\CentralStaffAccess;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -71,7 +73,7 @@ final class SchoolAssistedRecoveryService
     {
         $this->requireSharedCache();
         DB::transaction(function () use ($request, $context, $actor, $actorMembershipId, $id): void {
-            DB::table('tenants')->where('id', $context->tenantId)->lockForUpdate()->first();
+            app(TenantRegistry::class)->lockContext($context);
             abort_unless($this->permissions->allows($actor, $context, $actorMembershipId, 'members.assisted_reset'), 403);
             $candidate = DB::table('account_recovery_requests')->where('tenant_id', $context->tenantId)
                 ->where('public_ulid', $id)->where('scope', 'school_assisted')->first(['user_id']);
@@ -151,6 +153,6 @@ final class SchoolAssistedRecoveryService
         abort_unless($user !== null && $user->status === 'active' && $user->email === null
             && $roles->contains('student') && $roles->every(fn ($role) => $role === 'student')
             && DB::table('tenant_memberships')->where('user_id', $userId)->count() === 1
-            && ! DB::table('platform_staff')->where('user_id', $userId)->exists(), 403);
+            && ! app(CentralStaffAccess::class)->isStaff($userId), 403);
     }
 }

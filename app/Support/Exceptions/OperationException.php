@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Modules\Platform\Services;
+namespace App\Support\Exceptions;
 
 use RuntimeException;
 
-final class PlatformOperationException extends RuntimeException
+final class OperationException extends RuntimeException
 {
     public function __construct(
         public readonly string $failureCode,

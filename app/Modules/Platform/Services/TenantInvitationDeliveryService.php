@@ -3,10 +3,12 @@
 namespace App\Modules\Platform\Services;
 
 use App\Models\User;
-use App\Modules\Identity\Services\PlatformPermissionChecker;
+use App\Modules\Identity\Contracts\BootstrapAdminAccounts;
 use App\Modules\Platform\Data\ProvisionTenantResult;
 use App\Modules\Platform\Mail\BootstrapAdminInvitation;
+use App\Modules\Tenancy\Contracts\TenantRegistry;
 use App\Support\Audit\AuthAuditLogger;
+use App\Support\Exceptions\OperationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -17,6 +19,8 @@ final class TenantInvitationDeliveryService
     public function __construct(
         private readonly PlatformPermissionChecker $permissions,
         private readonly AuthAuditLogger $auditLogger,
+        private readonly TenantRegistry $tenants,
+        private readonly BootstrapAdminAccounts $bootstrap,
     ) {}
 
     public function sendProvisioned(
@@ -44,7 +48,7 @@ final class TenantInvitationDeliveryService
         string $invitationPublicUlid,
     ): ProvisionTenantResult {
         if (! $this->permissions->allows($actor, 'platform.tenants.update')) {
-            throw new PlatformOperationException(
+            throw new OperationException(
                 failureCode: 'forbidden',
                 statusCode: 403,
                 message: 'Aktor tidak memiliki izin mengirim ulang invitation.',
@@ -52,6 +56,7 @@ final class TenantInvitationDeliveryService
         }
 
         $result = DB::transaction(function () use ($request, $actor, $tenantPublicUlid, $invitationPublicUlid): ProvisionTenantResult {
+            $this->tenants->lock($tenantPublicUlid);
             $invitation = DB::table('account_invitations as invitations')
                 ->join('tenants', 'tenants.id', '=', 'invitations.tenant_id')
                 ->join('users', 'users.id', '=', 'invitations.target_user_id')
@@ -84,7 +89,7 @@ final class TenantInvitationDeliveryService
                 ]);
 
             if ($invitation === null) {
-                throw new PlatformOperationException(
+                throw new OperationException(
                     failureCode: 'invitation_not_found',
                     statusCode: 404,
                     message: 'Invitation tidak ditemukan.',
@@ -98,22 +103,16 @@ final class TenantInvitationDeliveryService
                 || $invitation->user_status !== 'pending'
                 || $invitation->membership_status !== 'invited'
             ) {
-                throw new PlatformOperationException(
+                throw new OperationException(
                     failureCode: 'invitation_not_resendable',
                     statusCode: 409,
                     message: 'Invitation sudah tidak dapat dikirim ulang.',
                 );
             }
 
-            $token = bin2hex(random_bytes(32));
-            $now = now();
-            DB::table('account_invitations')
-                ->where('id', $invitation->invitation_id)
-                ->update([
-                    'token_hash' => hash('sha256', $token),
-                    'expires_at' => $now->copy()->addHours((int) config('saas.provisioning_invitation_ttl_hours', 72)),
-                    'updated_at' => $now,
-                ]);
+            $token = $this->bootstrap->rotate(
+                (int) $invitation->tenant_id, (string) $invitation->invitation_public_ulid,
+            )->token;
 
             $this->auditLogger->platform(
                 request: $request,
@@ -200,14 +199,14 @@ final class TenantInvitationDeliveryService
                 Mail::to($invitation->email)->send($mailable);
             }
         } catch (Throwable $exception) {
-            report($exception);
+            // Transport exceptions may contain recipient addresses or activation secrets; audit only a stable code.
             $this->auditDelivery(
                 $request,
                 $actor,
                 $tenantPublicUlid,
                 $invitationPublicUlid,
                 'failed',
-                $exception::class,
+                'mail_transport_failed',
             );
 
             return 'failed';

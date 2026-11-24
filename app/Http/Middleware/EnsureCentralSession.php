@@ -3,10 +3,10 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Modules\Identity\Services\AuthSessionManager;
 use App\Modules\Identity\Services\CentralMfaService;
-use App\Modules\Tenancy\Support\Hostname;
 use App\Support\Auth\AuthSession;
-use App\Support\Auth\AuthSessionManager;
+use App\Support\Http\Hostname;
 use Closure;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Http\Request;

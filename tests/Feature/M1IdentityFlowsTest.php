@@ -60,7 +60,7 @@ final class M1IdentityFlowsTest extends TestCase
         $b = $this->tenant('email-b');
         $teacher = $this->user('teacher-reset@example.test');
         $memberA = $this->member($a, $teacher, 'teacher-a', 'teacher');
-        $this->member($b, $teacher, 'teacher-b', 'student');
+        $memberB = $this->member($b, $teacher, 'teacher-b', 'student');
         $unknown = $this->jsonPost('email-a', '/password/forgot', ['email' => 'missing@example.test'])->assertOk()->json('message');
         $known = $this->jsonPost('email-a', '/password/forgot', ['email' => 'teacher-reset@example.test'])->assertOk()->json('message');
         $this->assertSame($unknown, $known);
@@ -78,6 +78,8 @@ final class M1IdentityFlowsTest extends TestCase
         $this->assertTrue(Hash::check('ChangedPassword!234', (string) DB::table('users')->where('id', $teacher)->value('password')));
         $this->authenticateTenant($a, $teacher, $memberA, 'email-a.platform.test');
         $this->get('http://email-a.platform.test/dashboard')->assertRedirect('/login');
+        $this->authenticateTenant($b, $teacher, $memberB, 'email-b.platform.test');
+        $this->get('http://email-b.platform.test/dashboard')->assertRedirect('/login');
         $audit = DB::table('tenant_audit_logs')->where('target_id', $fragment['id'])->pluck('metadata_json')->implode(' ');
         $this->assertStringNotContainsString($fragment['token'], $audit);
     }

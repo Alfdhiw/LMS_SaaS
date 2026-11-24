@@ -7,10 +7,10 @@ use App\Http\Requests\Platform\ProvisionTenantRequest;
 use App\Http\Requests\Platform\ResendTenantInvitationRequest;
 use App\Models\User;
 use App\Modules\Platform\Data\ProvisionTenantData;
-use App\Modules\Platform\Services\PlatformOperationException;
 use App\Modules\Platform\Services\TenantDirectoryService;
 use App\Modules\Platform\Services\TenantInvitationDeliveryService;
 use App\Modules\Platform\Services\TenantProvisioningService;
+use App\Support\Exceptions\OperationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
@@ -78,7 +78,7 @@ final class TenantProvisioningController extends Controller
                 actor: $actor,
                 data: ProvisionTenantData::fromArray($request->validated()),
             );
-        } catch (PlatformOperationException $exception) {
+        } catch (OperationException $exception) {
             return $this->errorResponse($request, $exception);
         }
 
@@ -110,7 +110,7 @@ final class TenantProvisioningController extends Controller
                 tenantPublicUlid: $publicUlid,
                 invitationPublicUlid: (string) $request->validated('invitation_public_ulid'),
             );
-        } catch (PlatformOperationException $exception) {
+        } catch (OperationException $exception) {
             return $this->errorResponse($request, $exception);
         }
 
@@ -127,7 +127,7 @@ final class TenantProvisioningController extends Controller
         return response()->json(['data' => $payload]);
     }
 
-    private function errorResponse(Request $request, PlatformOperationException $exception): Response
+    private function errorResponse(Request $request, OperationException $exception): Response
     {
         if (! $request->expectsJson()) {
             return back()

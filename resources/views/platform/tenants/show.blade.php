@@ -9,7 +9,7 @@
         ? rtrim((string) config('saas.invitation_delivery.url_scheme', 'http'), ':/').'://'.$tenant['hostname'].$provisioning['activation_path']
         : null;
     $centralUser = request()->attributes->get('central_user');
-    $permissions = app(\App\Modules\Identity\Services\PlatformPermissionChecker::class);
+    $permissions = app(\App\Modules\Platform\Services\PlatformPermissionChecker::class);
     $canTransition = $permissions->allows($centralUser, 'platform.tenants.transition');
     $canUpdate = $permissions->allows($centralUser, 'platform.tenants.update');
 @endphp
@@ -52,7 +52,7 @@
     @endif
 
     <div class="actions">
-        @if (app(\App\Modules\Identity\Services\PlatformPermissionChecker::class)->allows(request()->attributes->get('central_user'), 'platform.audit.view'))
+        @if (app(\App\Modules\Platform\Services\PlatformPermissionChecker::class)->allows(request()->attributes->get('central_user'), 'platform.audit.view'))
             <a class="button secondary" href="{{ route('central.audit.index', ['tenant' => $tenant['public_ulid']]) }}">Audit tenant</a>
         @endif
         @if ($tenant['status'] === 'pending')

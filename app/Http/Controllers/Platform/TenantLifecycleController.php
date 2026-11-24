@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Platform;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Platform\TransitionTenantRequest;
 use App\Models\User;
-use App\Modules\Platform\Services\PlatformOperationException;
 use App\Modules\Platform\Services\TenantLifecycleService;
+use App\Support\Exceptions\OperationException;
 use Symfony\Component\HttpFoundation\Response;
 
 final class TenantLifecycleController extends Controller
@@ -50,7 +50,7 @@ final class TenantLifecycleController extends Controller
                 expectedStatus: $request->validated('expected_status'),
                 reason: $request->validated('reason'),
             );
-        } catch (PlatformOperationException $exception) {
+        } catch (OperationException $exception) {
             if (! $request->expectsJson()) {
                 return back()
                     ->withErrors([$exception->failureCode => $exception->getMessage()])

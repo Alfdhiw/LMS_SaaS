@@ -3,7 +3,6 @@
 namespace App\Modules\Platform\Services;
 
 use App\Models\User;
-use App\Modules\Identity\Services\PlatformPermissionChecker;
 use App\Modules\Tenancy\Actions\UpdateTenantMetadata;
 use App\Support\Audit\AuthAuditLogger;
 use Illuminate\Http\Request;

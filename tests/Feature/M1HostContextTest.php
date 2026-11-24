@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Http\Middleware\RequireTenantHost;
-use App\Modules\Tenancy\Data\TenantContext;
 use App\Modules\Tenancy\Services\TenantResolver;
+use App\Support\Tenancy\TenantContext;
 use App\Support\Tenancy\TenantContextStore;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;

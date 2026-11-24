@@ -1,6 +1,6 @@
 # LMS SaaS Multi-Sekolah — Milestone M0 Starter
 
-**Status:** M1 development baseline; aplikasi belum siap produksi. PR5 disetujui pengguna pada 21 November 2026; implementasi PR6 tersedia untuk review, belum disetujui, dan gate production masih terbuka.
+**Status:** M1 development baseline; aplikasi belum siap produksi. PR5 disetujui pengguna pada 21 November 2026. Remediasi temuan final review F01–F03 (ganti password, boundary modul, dan coverage keamanan) sudah diimplementasikan dengan izin pengguna. Bukti browser/HTTPS, CI commit remediasi, serta approval akhir PR6/M1 masih terbuka. Lihat [laporan final review](docs/runbooks/M1_FINAL_REVIEW.md) dan [acceptance checklist](docs/runbooks/M1_ACCEPTANCE_CHECKLIST.md).
 
 ## 1. Apa yang tersedia
 
@@ -10,7 +10,7 @@
 - Landing page dan endpoint `/health` untuk tes, PHPUnit smoke tests yang memeriksa PostgreSQL/Redis, GitHub Actions CI.
 - Central tenant directory/provisioning/lifecycle, invitation email + resend, activation tenant-bound, serta test concurrency/host smoke M1.
 - PRD Master, 2 PRD modul, ADR-001/002, ERD v1.1, `AGENTS.md`, dan `docs/DOCUMENT_INDEX.md`.
-- Contoh data tiga sekolah **sintetis** dalam JSON (belum dimasukkan ke database).
+- Contoh data tiga sekolah **sintetis** dalam JSON. Pada instalasi lokal yang direview 24 November 2026 sudah terdapat tiga sekolah sintetis aktif dan empat akun; ini bukan seeder otomatis atau kondisi semua instalasi.
 
 **Belum ada**: modul akademik M2+, billing, entitlement komersial, UI tenant sekolah yang lengkap, durable provisioning outbox, dan kesiapan production final. PRD/ADR/ERD aktif menjadi acuan; tidak ada data siswa nyata.
 
@@ -52,6 +52,9 @@ docker compose ps
 
 # Pemeriksaan khusus M0 pada instalasi lokal dengan pemisahan role audit
 .\scripts\m1-operator.ps1 test-m0
+
+# Subset regresi; filter tidak dapat dipakai pada operasi migrate/seed
+.\scripts\m1-operator.ps1 test -TestFilter 'M1PasswordChangeTest'
 
 # Formatter (ubah file otomatis)
 docker compose exec -T app ./vendor/bin/pint
@@ -112,6 +115,30 @@ Workflow CI **memerlukan `composer.lock` yang sudah dilacak Git**; CI akan gagal
    Recovery ini hanya untuk siswa aktif tanpa email yang memiliki tepat satu membership historis dan bukan staff platform.
 
 Untuk lokal, Mailpit digunakan melalui SMTP; buka `http://localhost:8025` hanya untuk akun sintetis. Sebelum production, gunakan HTTPS dan transport email yang benar, tetapkan trusted proxy dengan benar, dan pastikan secret tidak masuk log. Transport `log`, `failover`, dan `roundrobin` tidak diperbolehkan untuk email recovery. Delivery setelah commit belum memiliki durable outbox; kegagalan dapat memerlukan permintaan ulang.
+
+### Ganti password mandiri
+
+Pengguna yang sudah login dapat membuka **Ganti password** di dashboard sekolah atau portal pusat (`/password/change`).
+Masukkan password saat ini dan konfirmasi password baru 12–128 karakter, dengan batas byte mengikuti hasher (bcrypt
+maksimal 72 byte; karakter non-ASCII dapat menggunakan beberapa byte). Password tidak boleh setara dengan hash lama.
+Central tetap mensyaratkan MFA bila diwajibkan. Endpoint dilindungi CSRF, pembatasan percobaan, dan HTTPS di produksi.
+Password baru, kenaikan `users.auth_version`, revokasi recovery aktif, dan audit disimpan dalam satu transaksi.
+Setelah berhasil, pengguna keluar dan sesi lama di seluruh sekolah/central ditolak pada request berikutnya.
+Admin sekolah tidak memperoleh akses untuk mengganti password global milik orang lain. Akun dengan
+`must_change_password` wajib menyelesaikan perubahan sebelum mengakses aksi protected lain; logout tetap tersedia.
+Ini tidak mengizinkan penggunaan fallback password sementara atau mereset credential akun pilot yang sudah ada.
+
+### Boundary modul dan job tenant
+
+Platform tetap mengorkestrasi transaksi provisioning/lifecycle/resend, tetapi write Tenancy dan Identity dijalankan
+melalui contract/action pemilik. `TenantContext`, hostname utility dan exception operasi bersama berada di Support;
+Support tidak mengimpor Modules. Mapping permission/staff pusat dimiliki Platform. Architecture tests menjaga pola
+dependency/write M1 tanpa menambah paket atau mengubah ERD.
+
+Job tenant berikutnya harus memakai `App\Support\Tenancy\Jobs\UseTenantContext` dengan locator tenant/host dari server.
+Middleware memverifikasi ulang host aktif/terverifikasi dan tenant ID saat eksekusi, kemudian membersihkan context
+pada `finally`. Handler tetap wajib memeriksa actor/resource permission; middleware bukan izin akses universal.
+Test queue sync Laravel memeriksa serialisasi, job A -> kegagalan -> B, bukan worker Redis lintas proses.
 
 Test otomatis dapat menghapus tabel pada **database test**. `tests/TestCase.php` mengunci dan memverifikasi nama database PostgreSQL `lms_saas_test` sebelum trait migrasi berjalan. Jangan mengubah atau melewati pengaman ini; jangan menyimpan data yang perlu dipertahankan di database test.
 
@@ -199,6 +226,10 @@ Uji helper dengan data sintetis di PostgreSQL sementara tanpa jaringan/volume pe
 Job GitHub Actions `private-database-helper` menjalankan uji helper dan lab SCRAM sintetis dengan PowerShell pada
 runner Linux. Semua script dan fixture sintetis yang dibutuhkan harus ikut di-commit; hasil GitHub baru tersedia
 setelah perubahan di-commit dan di-push oleh pengguna.
+
+Final review 24 November 2026 memverifikasi [run M0 checks untuk commit b07ebdf](https://github.com/Alfdhiw/LMS_SaaS/actions/runs/45137773386):
+job `private-database-helper` dan `smoke` sukses. Bukti ini berlaku untuk commit tersebut, bukan jaminan coverage
+seluruh acceptance matrix atau hasil CI bagi perubahan kode/dokumentasi remediasi yang belum di-commit/push.
 
 Lab `./tests/Support/m1-scram-synthetic-test.ps1` menguji usulan SCRAM, bootstrap, dump/restore, dan rollback
 pada container sementara tanpa jaringan. Kandidat `database/security/m1_pg_hba_scram_local.conf` mempertahankan tujuh

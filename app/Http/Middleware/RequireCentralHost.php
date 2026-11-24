@@ -2,7 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Modules\Tenancy\Support\Hostname;
+use App\Support\Http\Hostname;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;

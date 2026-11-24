@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Tenancy\Data;
+namespace App\Support\Tenancy;
 
 final readonly class TenantContext
 {

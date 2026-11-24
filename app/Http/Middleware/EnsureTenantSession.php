@@ -3,9 +3,9 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
-use App\Modules\Tenancy\Support\Hostname;
+use App\Modules\Identity\Services\AuthSessionManager;
 use App\Support\Auth\AuthSession;
-use App\Support\Auth\AuthSessionManager;
+use App\Support\Http\Hostname;
 use App\Support\Tenancy\TenantContextStore;
 use Closure;
 use Illuminate\Auth\AuthManager;

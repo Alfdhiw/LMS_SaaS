@@ -93,3 +93,26 @@ Pengguna menyetujui pemasangan kandidat HBA dan reload PostgreSQL lokal pada 202
 SCRAM sudah diterapkan pada volume lokal yang direview; hasil rollout dan bukti pemulihan dicatat di
 `docs/runbooks/M1_ARCHITECTURE_GATE.md`. Ini adalah perubahan operasional tanpa perubahan ERD/schema, berlaku untuk
 instalasi lokal tersebut, dan tidak mengubah status review PR6 atau menjadi approval produksi.
+
+## K. Final review M1 — 24 November 2026
+
+`docs/runbooks/M1_FINAL_REVIEW.md` mencatat review commit `b07ebdf182080f184065caf5b60a2b81c9efafaa`,
+hasil pengujian ulang, tautan CI, temuan requirement/arsitektur, serta syarat penutupan. Checklist penerimaan dan
+`M1_TEST_MATRIX.md` sekarang memisahkan bukti yang tersedia dari cakupan parsial atau belum diuji.
+
+Status: **changes requested; PR6 belum disetujui, M1 belum complete, M2 belum dimulai**. Permintaan melaksanakan
+final review bukan approval otomatis atas hasilnya. Baseline PRD/ADR/ERD yang Accepted tidak berubah;
+penyelesaian gap harus mengikuti baseline tersebut atau keputusan perubahan eksplisit dari pemilik.
+
+## L. Remediasi final review M1 — 24 November 2026
+
+Pengguna menyetujui implementasi rekomendasi 1–3 dengan jawaban "oke saya setujui". Cakupan: perubahan password
+mandiri AUTH-06, pemulihan boundary owner/dependency ADR-002, dan perluasan test kegagalan/session/job tenant.
+Implementasi mengikuti baseline Accepted yang sama, tanpa schema/migration/Docker baru atau pengecualian ADR.
+
+Evidence terbaru ada pada §8 `docs/runbooks/M1_FINAL_REVIEW.md`; checklist/matrix dan README contract telah
+diselaraskan dengan alur yang tersedia. Bagian K dan review awal tetap merupakan snapshot historis, bukan status
+bahwa fitur tersebut masih hilang setelah remediasi. CI commit `b07ebdf` tidak berlaku bagi working tree baru.
+
+Persetujuan implementasi ini **bukan approval hasil PR6 atau penutupan M1**. Demonstrasi browser empat host/HTTPS,
+CI commit remediasi, dan keputusan akhir pengguna tetap terbuka. Tidak ada izin M2, data nyata, push atau merge.

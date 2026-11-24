@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Identity\Services\AuthSessionManager;
 use App\Modules\Identity\Services\PermissionChecker;
 use App\Modules\Identity\Services\TenantAuthenticator;
 use App\Modules\Identity\Support\IdentityNormalizer;
 use App\Support\Audit\AuthAuditLogger;
-use App\Support\Auth\AuthSessionManager;
 use App\Support\Auth\LoginRateLimiter;
 use App\Support\Tenancy\TenantContextStore;
 use Illuminate\Http\Request;

@@ -4,8 +4,9 @@ namespace App\Modules\Identity\Services;
 
 use App\Models\User;
 use App\Modules\Identity\Support\IdentityNormalizer;
-use App\Modules\Tenancy\Data\TenantContext;
+use App\Modules\Tenancy\Contracts\TenantRegistry;
 use App\Support\Audit\AuthAuditLogger;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -24,7 +25,7 @@ final class MemberInvitationService
         $normalized = IdentityNormalizer::username($username);
 
         return DB::transaction(function () use ($request, $context, $actor, $actorMembershipId, $name, $username, $normalized, $role): array {
-            DB::table('tenants')->where('id', $context->tenantId)->lockForUpdate()->first();
+            app(TenantRegistry::class)->lockContext($context);
             abort_unless($this->permissions->allows($actor, $context, $actorMembershipId, 'members.invite'), 403);
             $used = DB::table('tenant_memberships')->where('tenant_id', $context->tenantId)->where('local_username_normalized', $normalized)->exists();
             $pendingJoin = DB::table('account_invitations')->where('tenant_id', $context->tenantId)->where('purpose', 'join_existing')

@@ -5,9 +5,9 @@ use App\Modules\Identity\Services\BootstrapAdminActivationService;
 use App\Modules\Identity\Services\ExistingAccountInvitationService;
 use App\Modules\Identity\Services\SchoolAssistedRecoveryService;
 use App\Modules\Identity\Services\SelfEmailRecoveryService;
-use App\Modules\Platform\Services\PlatformOperationException;
 use App\Modules\Platform\Services\TenantLifecycleService;
 use App\Modules\Tenancy\Services\TenantResolver;
+use App\Support\Exceptions\OperationException;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -68,7 +68,7 @@ try {
     echo 'consumed';
 } catch (HttpExceptionInterface $exception) {
     echo 'rejected:'.$exception->getStatusCode();
-} catch (PlatformOperationException $exception) {
+} catch (OperationException $exception) {
     echo 'rejected:'.$exception->statusCode;
 } catch (Throwable $exception) {
     fwrite(STDERR, get_class($exception));

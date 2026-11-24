@@ -5,7 +5,7 @@ namespace App\Modules\Identity\Services;
 use App\Models\User;
 use App\Modules\Identity\Data\TenantLoginIdentity;
 use App\Modules\Identity\Support\IdentityNormalizer;
-use App\Modules\Tenancy\Data\TenantContext;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 

@@ -2,7 +2,6 @@
 
 namespace App\Support\Tenancy;
 
-use App\Modules\Tenancy\Data\TenantContext;
 use LogicException;
 
 final class TenantContextStore

@@ -1,12 +1,15 @@
 <?php
 
-namespace App\Modules\Identity\Services;
+namespace App\Modules\Platform\Services;
 
 use App\Models\User;
+use App\Modules\Identity\Contracts\PermissionCatalogue;
 use Illuminate\Support\Facades\DB;
 
 final class PlatformPermissionChecker
 {
+    public function __construct(private readonly PermissionCatalogue $catalogue) {}
+
     public function allows(User $user, string $permission): bool
     {
         $staff = DB::table('platform_staff')
@@ -24,9 +27,6 @@ final class PlatformPermissionChecker
             return false;
         }
 
-        return DB::table('permissions')
-            ->where('key', $permission)
-            ->where('scope', 'platform')
-            ->exists();
+        return $this->catalogue->containsPlatformPermission($permission);
     }
 }

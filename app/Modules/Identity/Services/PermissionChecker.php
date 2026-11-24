@@ -3,7 +3,7 @@
 namespace App\Modules\Identity\Services;
 
 use App\Models\User;
-use App\Modules\Tenancy\Data\TenantContext;
+use App\Support\Tenancy\TenantContext;
 use App\Support\Tenancy\TenantContextStore;
 use Illuminate\Support\Facades\DB;
 

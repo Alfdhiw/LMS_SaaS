@@ -2,12 +2,15 @@
 
 use App\Http\Controllers\Auth\CentralAuthController;
 use App\Http\Controllers\Auth\CentralMfaController;
+use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Platform\PlatformAuditController;
 use App\Http\Controllers\Platform\TenantLifecycleController;
 use App\Http\Controllers\Platform\TenantMetadataController;
 use App\Http\Controllers\Platform\TenantProvisioningController;
 use App\Http\Middleware\EnsureCentralSession;
 use App\Http\Middleware\RequireCentralHost;
+use App\Http\Middleware\RequirePasswordChange;
+use App\Http\Middleware\RequireSecureIdentityTransport;
 use Illuminate\Support\Facades\Route;
 
 Route::domain((string) config('saas.central_host'))
@@ -23,7 +26,11 @@ Route::domain((string) config('saas.central_host'))
             Route::post('/mfa/challenge', [CentralMfaController::class, 'challenge']);
         });
 
-        Route::middleware(EnsureCentralSession::class)->group(function (): void {
+        Route::middleware([EnsureCentralSession::class, RequirePasswordChange::class])->group(function (): void {
+            Route::get('/password/change', [PasswordChangeController::class, 'edit'])
+                ->middleware(RequireSecureIdentityTransport::class)->name('central.password.change');
+            Route::post('/password/change', [PasswordChangeController::class, 'update'])
+                ->middleware([RequireSecureIdentityTransport::class, 'throttle:5,1'])->name('central.password.change.update');
             Route::get('/audit', [PlatformAuditController::class, 'index'])
                 ->middleware('central.permission:platform.audit.view')
                 ->name('central.audit.index');

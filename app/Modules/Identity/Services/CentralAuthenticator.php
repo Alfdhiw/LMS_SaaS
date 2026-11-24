@@ -5,20 +5,20 @@ namespace App\Modules\Identity\Services;
 use App\Models\User;
 use App\Modules\Identity\Data\CentralLoginIdentity;
 use App\Modules\Identity\Support\IdentityNormalizer;
+use App\Support\Auth\CentralStaffAccess;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 final class CentralAuthenticator
 {
+    public function __construct(private readonly CentralStaffAccess $staff) {}
+
     public function attempt(string $email, string $password): ?CentralLoginIdentity
     {
         $row = DB::table('users')
-            ->join('platform_staff', 'platform_staff.user_id', '=', 'users.id')
             ->where('users.email_normalized', IdentityNormalizer::email($email))
             ->whereNotNull('users.email_verified_at')
             ->where('users.status', 'active')
-            ->where('platform_staff.status', 'active')
-            ->where('platform_staff.role', 'super_admin')
             ->select([
                 'users.id',
                 'users.auth_version',
@@ -26,7 +26,7 @@ final class CentralAuthenticator
             ])
             ->first();
 
-        if ($row === null || ! Hash::check($password, (string) $row->password)) {
+        if ($row === null || ! $this->staff->isActiveOperator((int) $row->id) || ! Hash::check($password, (string) $row->password)) {
             return null;
         }
 

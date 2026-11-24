@@ -4,8 +4,9 @@ namespace App\Modules\Identity\Services;
 
 use App\Modules\Identity\Mail\SelfRecoveryMail;
 use App\Modules\Identity\Support\IdentityNormalizer;
-use App\Modules\Tenancy\Data\TenantContext;
 use App\Support\Audit\AuthAuditLogger;
+use App\Support\Auth\CentralStaffAccess;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -32,7 +33,7 @@ final class SelfEmailRecoveryService
         $issued = DB::transaction(function () use ($request, $context, $userId): ?array {
             $user = DB::table('users')->where('id', $userId)->lockForUpdate()->first();
             if ($user === null || $user->status !== 'active' || $user->email_verified_at === null
-                || DB::table('platform_staff')->where('user_id', $userId)->exists()) {
+                || app(CentralStaffAccess::class)->isStaff($userId)) {
                 return null;
             }
             DB::table('account_recovery_requests')->where('user_id', $userId)->where('scope', 'self_email')
@@ -86,7 +87,7 @@ final class SelfEmailRecoveryService
             $user = DB::table('users')->where('id', $candidate->user_id)->lockForUpdate()->first();
             abort_if($user === null || $user->status !== 'active' || $user->email_verified_at === null, 404);
             $belongs = DB::table('tenant_memberships')->where('tenant_id', $context->tenantId)->where('user_id', $user->id)->exists();
-            abort_if(! $belongs || DB::table('platform_staff')->where('user_id', $user->id)->exists(), 404);
+            abort_if(! $belongs || app(CentralStaffAccess::class)->isStaff((int) $user->id), 404);
             $recovery = DB::table('account_recovery_requests')->where('public_ulid', $id)->where('user_id', $user->id)
                 ->where('scope', 'self_email')->where('status', 'token_issued')->where('expires_at', '>', now())
                 ->where('token_hash', hash('sha256', $token))->lockForUpdate()->first();

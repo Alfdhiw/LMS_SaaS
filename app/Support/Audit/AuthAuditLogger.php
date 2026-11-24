@@ -2,7 +2,7 @@
 
 namespace App\Support\Audit;
 
-use App\Modules\Tenancy\Data\TenantContext;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;

@@ -7,7 +7,7 @@
 <p class="muted">Kelola onboarding dan lifecycle sekolah tanpa membuka data akademik atau data siswa.</p>
 
 <div class="grid">
-    @if (app(\App\Modules\Identity\Services\PlatformPermissionChecker::class)->allows(request()->attributes->get('central_user'), 'platform.tenants.create'))
+    @if (app(\App\Modules\Platform\Services\PlatformPermissionChecker::class)->allows(request()->attributes->get('central_user'), 'platform.tenants.create'))
     <section class="card">
         <h2>Provision tenant</h2>
         <p class="muted">Tenant baru dibuat sebagai <strong>pending</strong> sampai admin mengaktifkan akun dan operator menyelesaikan readiness check.</p>

@@ -3,11 +3,13 @@
 use App\Http\Controllers\Auth\ExistingAccountInvitationController;
 use App\Http\Controllers\Auth\MemberInvitationController;
 use App\Http\Controllers\Auth\MembershipController;
+use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Auth\SchoolAssistedRecoveryController;
 use App\Http\Controllers\Auth\SelfEmailRecoveryController;
 use App\Http\Controllers\Auth\TenantActivationController;
 use App\Http\Controllers\Auth\TenantAuthController;
 use App\Http\Middleware\EnsureTenantSession;
+use App\Http\Middleware\RequirePasswordChange;
 use App\Http\Middleware\RequireSecureIdentityTransport;
 use App\Http\Middleware\RequireTenantActivationHost;
 use App\Http\Middleware\RequireTenantHost;
@@ -37,7 +39,11 @@ Route::middleware(RequireTenantHost::class)->group(function (): void {
     Route::get('/login', [TenantAuthController::class, 'showLogin'])->name('tenant.login');
     Route::post('/login', [TenantAuthController::class, 'login']);
 
-    Route::middleware(EnsureTenantSession::class)->group(function (): void {
+    Route::middleware([EnsureTenantSession::class, RequirePasswordChange::class])->group(function (): void {
+        Route::get('/password/change', [PasswordChangeController::class, 'edit'])
+            ->middleware(RequireSecureIdentityTransport::class)->name('tenant.password.change');
+        Route::post('/password/change', [PasswordChangeController::class, 'update'])
+            ->middleware([RequireSecureIdentityTransport::class, 'throttle:5,1'])->name('tenant.password.change.update');
         Route::get('/members/manage', fn () => response()->view('auth.members-manage')->header('Cache-Control', 'no-store'))
             ->middleware([RequireSecureIdentityTransport::class, 'tenant.permission:members.invite']);
         Route::post('/members/invitations/existing', [ExistingAccountInvitationController::class, 'issue'])

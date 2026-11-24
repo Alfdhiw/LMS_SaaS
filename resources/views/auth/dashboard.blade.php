@@ -10,6 +10,7 @@
         <h1>{{ $title }}</h1>
         <p>{{ $subtitle }}</p>
         <p>Selamat datang, {{ $userName }}.</p>
+        <p><a href="/password/change">Ganti password</a></p>
         @if ($manageMembers ?? false)
             <p><a href="/members/manage">Kelola undangan anggota</a></p>
         @endif

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Tenancy\Support;
+namespace App\Support\Http;
 
 use Illuminate\Http\Request;
 

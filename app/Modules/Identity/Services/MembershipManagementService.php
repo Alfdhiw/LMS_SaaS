@@ -3,8 +3,9 @@
 namespace App\Modules\Identity\Services;
 
 use App\Models\User;
-use App\Modules\Tenancy\Data\TenantContext;
+use App\Modules\Tenancy\Contracts\TenantRegistry;
 use App\Support\Audit\AuthAuditLogger;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -23,7 +24,7 @@ final class MembershipManagementService
 
         DB::transaction(function () use ($request, $context, $actor, $actorMembershipId, $userUlid, $status): void {
             // Serializes last-admin checks across concurrent membership changes.
-            DB::table('tenants')->where('id', $context->tenantId)->lockForUpdate()->first();
+            app(TenantRegistry::class)->lockContext($context);
             abort_unless($this->permissions->allows($actor, $context, $actorMembershipId, 'members.suspend'), 403);
             $member = $this->member($context, $userUlid);
             abort_unless(in_array($member->status, ['active', 'suspended'], true), 409);
@@ -55,6 +56,9 @@ final class MembershipManagementService
         abort_unless($this->permissions->allows($actor, $context, $actorMembershipId, 'members.assign_roles'), 403);
         $roleKeys = array_values(array_unique($roleKeys));
         sort($roleKeys);
+        foreach ($roleKeys as $roleKey) {
+            abort_if(str_starts_with($roleKey, 'platform.') || in_array($roleKey, ['super_admin', 'platform_super_admin'], true), 403);
+        }
         $allowed = ['school_admin', 'teacher', 'homeroom_teacher', 'student'];
 
         if ($roleKeys === [] || array_diff($roleKeys, $allowed) !== []) {
@@ -62,7 +66,7 @@ final class MembershipManagementService
         }
 
         DB::transaction(function () use ($request, $context, $actor, $actorMembershipId, $userUlid, $roleKeys): void {
-            DB::table('tenants')->where('id', $context->tenantId)->lockForUpdate()->first();
+            app(TenantRegistry::class)->lockContext($context);
             abort_unless($this->permissions->allows($actor, $context, $actorMembershipId, 'members.assign_roles'), 403);
             $member = $this->member($context, $userUlid);
             $old = DB::table('membership_roles as mr')->join('roles', 'roles.id', '=', 'mr.role_id')

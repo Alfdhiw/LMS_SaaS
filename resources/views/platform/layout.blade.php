@@ -45,9 +45,10 @@
 <header>
     <strong>LMS SaaS · Central</strong>
     <nav>
+        <a href="{{ route('central.password.change') }}">Ganti password</a>
         @php
             $centralUser = request()->attributes->get('central_user');
-            $platformPermissions = app(\App\Modules\Identity\Services\PlatformPermissionChecker::class);
+            $platformPermissions = app(\App\Modules\Platform\Services\PlatformPermissionChecker::class);
         @endphp
         @if ($centralUser && $platformPermissions->allows($centralUser, 'platform.tenants.view'))
             <a href="{{ route('central.dashboard') }}">Dashboard</a>

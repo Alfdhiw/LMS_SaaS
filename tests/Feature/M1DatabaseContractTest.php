@@ -70,6 +70,32 @@ class M1DatabaseContractTest extends TestCase
         $this->assertSame(2, DB::table('tenant_memberships')->count());
     }
 
+    public function test_declared_m1_constraints_and_partial_indexes_exist_and_are_validated(): void
+    {
+        $expectedConstraints = [];
+        $expectedIndexes = [];
+        foreach (glob(database_path('migrations/*.php')) as $migration) {
+            $source = file_get_contents($migration);
+            preg_match_all('/ADD CONSTRAINT ([a-z0-9_]+)/i', $source, $matches);
+            $expectedConstraints = [...$expectedConstraints, ...$matches[1]];
+            preg_match_all('/CREATE UNIQUE INDEX ([a-z0-9_]+)/i', $source, $matches);
+            $expectedIndexes = [...$expectedIndexes, ...$matches[1]];
+        }
+        $this->assertNotEmpty($expectedConstraints);
+        $this->assertNotEmpty($expectedIndexes);
+        $constraints = DB::select("SELECT conname, convalidated FROM pg_constraint c JOIN pg_namespace n ON n.oid=c.connamespace WHERE n.nspname='public'");
+        $valid = collect($constraints)->keyBy('conname');
+        foreach ($expectedConstraints as $name) {
+            $this->assertTrue($valid->has($name), 'Missing constraint: '.$name);
+            $this->assertTrue((bool) $valid->get($name)->convalidated, 'Unvalidated constraint: '.$name);
+        }
+        $indexes = collect(DB::select("SELECT indexname FROM pg_indexes WHERE schemaname='public'"))->pluck('indexname')->all();
+        foreach ($expectedIndexes as $name) {
+            $this->assertContains($name, $indexes);
+        }
+        $this->assertCount(95, $constraints);
+    }
+
     public function test_platform_permission_is_not_grantable_to_school_role(): void
     {
         $role = DB::table('roles')->insertGetId(['key' => 'school_admin', 'display_name' => 'Admin Sekolah']);

@@ -513,4 +513,77 @@ Audit database hardening design: [x] Approved — reviewer: user (chat approval)
 Implementation: local rollout verified — not production approval; PR6 remains under review.
 ```
 
+## Final review PR6 / penutupan M1 — 24 November 2026
+
+Pengguna meminta final review dan penutupan M1. Review dilakukan terhadap commit
+`b07ebdf182080f184065caf5b60a2b81c9efafaa`; ini bukan persetujuan otomatis PR6 atau perubahan baseline arsitektur.
+Laporan lengkap: [M1_FINAL_REVIEW.md](M1_FINAL_REVIEW.md). Checklist dan matrix sekarang mencatat evidence,
+termasuk poin parsial/terbuka; catatan persiapan serta insiden historis di atas tetap dipertahankan.
+
+Bukti aktual pada 24 November 2026:
+
+- Operator `test` pada `lms_saas_test`: **75 test/513 assertion lulus**, 324,09 detik, termasuk concurrency.
+- Integrasi runtime PostgreSQL tmpfs terisolasi: **2 test/43 assertion lulus**; container/jaringan latihan dibersihkan.
+- Composer valid; Pint **110 file lulus**; JavaScript recovery **3 test lulus**; HTTP host smoke **6 pemeriksaan lulus**.
+- Route inventory: 45 route aplikasi; lima migration lokal `Ran`; koneksi/hak audit runtime app, worker, scheduler lulus.
+- [GitHub Actions run 45137773386](https://github.com/Alfdhiw/LMS_SaaS/actions/runs/45137773386)
+  untuk commit yang direview: job `private-database-helper` dan `smoke` sukses, termasuk lab SCRAM.
+  Hanya metadata status job/step yang dibaca; log CI tidak diunduh.
+- Hitungan database utama pada baseline, counter-check dan pembacaan penutup tetap 3 tenant aktif, 4 user, 5 migration, 14 audit platform,
+  dan 5 audit tenant. Katalog memiliki 17 tabel dan 95 constraint tervalidasi; tujuh rule HBA terbaca sebagai SCRAM.
+  Hitungan ini bukan fingerprint seluruh isi data atau bukti seluruh constraint ERD sudah diuji negatif.
+
+Temuan yang menghalangi penutupan:
+
+1. **High — AUTH-06:** alur user aktif mengganti password dengan sandi lama/re-auth belum tersedia; recovery
+   email/sekolah bukan pengganti requirement tersebut. Tidak ditemukan route/controller/action/test perubahan mandiri.
+2. **High — ADR-002:** provisioning/lifecycle/resend masih menulis langsung tabel milik Tenancy/Identity dari
+   Platform; Support mengimpor tipe dari Modules. Belum ada pengecualian arsitektur yang disetujui untuk drift ini.
+3. **High — evidence:** suite hijau tidak membuktikan semua matrix. Fault injection kegagalan invitation di tengah
+   provisioning, kegagalan pengiriman email, dan job A -> B belum memiliki tes langsung; beberapa skenario session
+   dan constraint baru teruji parsial. Rincian ada pada matrix.
+4. **Medium — browser/HTTPS:** percobaan menghubungkan browser terblokir error alat `missing field sandboxPolicy`.
+   Tidak ada login/demo browser yang dijalankan; HTTP smoke dan test JavaScript bukan bukti browser HTTPS.
+
+Tidak ada implementasi perbaikan/pengecualian arsitektur, perubahan schema, migration/seed database utama, restore,
+perubahan HBA/role/password, konfigurasi Docker, atau data siswa nyata pada review ini. Tes menjalankan migration
+hanya pada database test khusus dan PostgreSQL sementara. Tidak ada commit/push/merge atau pengerjaan M2.
+
+```text
+PR6 final technical review: changes requested — date: 2026-11-24
+PR6 approval: [ ] Approved — menunggu penyelesaian temuan dan keputusan pengguna
+M1 closure: [ ] Complete — acceptance evidence belum lengkap
+Production / real-student pilot: NOT APPROVED
+```
+
+## Persetujuan remediasi final review 1–3 — 24 November 2026
+
+Pengguna menyetujui rekomendasi implementasi dengan jawaban "oke saya setujui": (1) perubahan password mandiri,
+(2) perbaikan write boundary/arah dependency sesuai ADR-002, dan (3) perluasan pengujian keamanan/session/job.
+Persetujuan ini bukan approval hasil PR6/M1, nomor 4 demonstrasi/setup HTTPS, produksi, M2, atau Git push/merge.
+
+Remediasi sudah diimplementasikan mengikuti baseline Accepted tanpa pengecualian arsitektur atau perubahan schema:
+
+- Alur authenticated `/password/change` tenant/central memverifikasi password lama, membatasi input sesuai hasher,
+  mengaudit secara atomik, mencabut recovery aktif dan sesi global. MFA, CSRF, rate limit dan transport tetap dijaga.
+- Platform mengorkestrasi transaksi melalui contract/action owner Tenancy/Identity. Support tidak lagi mengimpor
+  Modules; permission mapping platform, provider dan seluruh consumer namespace diselaraskan.
+- Feature tests langsung mencakup rollback invitation di tengah bundle, mail failure/resend, collision/XOR/expiry,
+  replay sesi setelah suspend/role/reset lintas host. Architecture guard dan queue sync exception/context tests tersedia.
+- Full regression final lulus **100 test/791 assertion**, 311,85 detik. Runtime sintetis lulus 2 test/51 assertion;
+  Pint 134 file, Composer valid, JavaScript 3 test dan HTTP smoke 6 pemeriksaan lulus. Evidence dan inventory lengkap
+  ada pada §8 `M1_FINAL_REVIEW.md`.
+- Snapshot read-only database utama tetap 3 tenant aktif/4 user/5 migration/14 audit platform/5 audit tenant;
+  95 constraint tervalidasi dan 7 rule SCRAM tanpa error. Tidak ada migration/seed/rebuild/restore utama,
+  perubahan role/HBA/password pilot, konfigurasi Docker, data nyata, commit/push/merge atau pekerjaan M2.
+
+Catatan temuan F01–F03 di bagian review awal merupakan riwayat sebelum remediasi, bukan status implementasi terbaru.
+Browser/HTTPS F04 dan CI commit remediasi belum mempunyai evidence baru; CI `b07ebdf` tetap bukti historis saja.
+
+```text
+Remediation scope 1–3: [x] Approved — reviewer: user (chat), date: 2026-11-24
+PR6 result / M1 closure: [ ] Approved — evidence browser/HTTPS + CI commit baru + keputusan akhir belum lengkap
+M2 / production / real-student pilot: NOT AUTHORIZED
+```
+
 Setelah perubahan keputusan, update status di dokumen asli dan `docs/DOCUMENT_INDEX.md`; simpan riwayat, jangan hapus versi lama. Draft migration disesuaikan jika review mengubah schema.

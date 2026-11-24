@@ -2,16 +2,16 @@
 
 namespace App\Modules\Identity\Services;
 
-use App\Modules\Tenancy\Data\TenantContext;
+use App\Modules\Tenancy\Contracts\TenantRegistry;
 use App\Support\Audit\AuthAuditLogger;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Throwable;
 
 final class BootstrapAdminActivationService
 {
-    public function __construct(private readonly AuthAuditLogger $auditLogger) {}
+    public function __construct(private readonly AuthAuditLogger $auditLogger, private readonly TenantRegistry $tenants) {}
 
     /**
      * @return array{display_name: string, email: string, username: string}|null
@@ -39,6 +39,7 @@ final class BootstrapAdminActivationService
         string $password,
     ): bool {
         return DB::transaction(function () use ($request, $context, $invitationPublicUlid, $token, $password): bool {
+            $tenant = $this->tenants->lockContext($context, 'pending');
             $invitation = $this->pendingInvitation(
                 context: $context,
                 invitationPublicUlid: $invitationPublicUlid,
@@ -50,10 +51,6 @@ final class BootstrapAdminActivationService
                 return false;
             }
 
-            $tenant = DB::table('tenants')
-                ->where('id', $context->tenantId)
-                ->lockForUpdate()
-                ->first(['status']);
             $user = DB::table('users')
                 ->where('id', $invitation->target_user_id)
                 ->lockForUpdate()
@@ -105,20 +102,7 @@ final class BootstrapAdminActivationService
                     'updated_at' => $now,
                 ]);
 
-            $settings = DB::table('tenant_settings')
-                ->where('tenant_id', $context->tenantId)
-                ->lockForUpdate()
-                ->first(['onboarding_json']);
-            $onboarding = $this->decodeObject($settings?->onboarding_json);
-            $onboarding['admin_activation_required'] = false;
-            $onboarding['admin_activated_at'] = $now->toIso8601String();
-
-            DB::table('tenant_settings')
-                ->where('tenant_id', $context->tenantId)
-                ->update([
-                    'onboarding_json' => json_encode($onboarding, JSON_THROW_ON_ERROR),
-                    'updated_at' => $now,
-                ]);
+            $this->tenants->completeAdminActivation($context);
 
             $this->auditLogger->tenant(
                 request: $request,
@@ -179,23 +163,5 @@ final class BootstrapAdminActivationService
         }
 
         return $query->first();
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function decodeObject(mixed $value): array
-    {
-        if (! is_string($value) || $value === '') {
-            return [];
-        }
-
-        try {
-            $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
-        } catch (Throwable) {
-            return [];
-        }
-
-        return is_array($decoded) ? $decoded : [];
     }
 }

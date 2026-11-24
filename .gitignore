@@ -12,7 +12,7 @@
 /.vscode/
 /.fleet/
 /.m0-laravel-scaffold/
-# Project documentation is local by default; keep approval records versioned.
+# Project documentation is local by default; keep approvals and M1 review evidence versioned.
 /docs/*
 !/docs/
 !/docs/DOCUMENT_INDEX.md
@@ -20,6 +20,9 @@
 /docs/runbooks/*
 !/docs/runbooks/M1_ARCHITECTURE_GATE.md
 !/docs/runbooks/M1_CENTRAL_MFA_RUNBOOK.md
+!/docs/runbooks/M1_ACCEPTANCE_CHECKLIST.md
+!/docs/runbooks/M1_TEST_MATRIX.md
+!/docs/runbooks/M1_FINAL_REVIEW.md
 /.phpunit-watcher.yml
 /storage/*.key
 /storage/logs/*

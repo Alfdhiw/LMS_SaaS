@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Support\Auth;
+namespace App\Modules\Identity\Services;
 
 use App\Modules\Identity\Data\CentralLoginIdentity;
 use App\Modules\Identity\Data\TenantLoginIdentity;
-use App\Modules\Tenancy\Data\TenantContext;
-use App\Modules\Tenancy\Support\Hostname;
+use App\Support\Auth\AuthSession;
+use App\Support\Http\Hostname;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;

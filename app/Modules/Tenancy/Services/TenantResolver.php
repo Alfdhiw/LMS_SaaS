@@ -2,12 +2,13 @@
 
 namespace App\Modules\Tenancy\Services;
 
-use App\Modules\Tenancy\Data\TenantContext;
-use App\Modules\Tenancy\Support\Hostname;
+use App\Support\Http\Hostname;
+use App\Support\Tenancy\TenantContext;
+use App\Support\Tenancy\TenantContextResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-final class TenantResolver
+final class TenantResolver implements TenantContextResolver
 {
     public function resolveFromRequest(Request $request): ?TenantContext
     {

@@ -2,8 +2,8 @@
 
 use App\Models\User;
 use App\Modules\Platform\Data\ProvisionTenantData;
-use App\Modules\Platform\Services\PlatformOperationException;
 use App\Modules\Platform\Services\TenantProvisioningService;
+use App\Support\Exceptions\OperationException;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -43,7 +43,7 @@ Artisan::command('m1:provision-concurrency {actorId} {slug} {idempotencyKey}', f
     try {
         $result = app(TenantProvisioningService::class)
             ->provision($request, $actor, $data);
-    } catch (PlatformOperationException $exception) {
+    } catch (OperationException $exception) {
         $this->line(json_encode([
             'status' => 'error',
             'failure_code' => $exception->failureCode,

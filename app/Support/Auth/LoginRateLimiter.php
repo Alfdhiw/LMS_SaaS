@@ -2,7 +2,7 @@
 
 namespace App\Support\Auth;
 
-use App\Modules\Tenancy\Data\TenantContext;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 

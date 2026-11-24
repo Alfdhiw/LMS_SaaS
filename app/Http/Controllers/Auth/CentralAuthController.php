@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Identity\Services\AuthSessionManager;
 use App\Modules\Identity\Services\CentralAuthenticator;
 use App\Modules\Identity\Services\CentralMfaService;
 use App\Modules\Identity\Support\IdentityNormalizer;
 use App\Modules\Platform\Services\PlatformDashboardService;
 use App\Support\Audit\AuthAuditLogger;
-use App\Support\Auth\AuthSessionManager;
 use App\Support\Auth\LoginRateLimiter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

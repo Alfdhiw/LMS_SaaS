@@ -3,8 +3,8 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
-use App\Modules\Tenancy\Support\Hostname;
 use App\Support\Auth\AuthSession;
+use App\Support\Http\Hostname;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
