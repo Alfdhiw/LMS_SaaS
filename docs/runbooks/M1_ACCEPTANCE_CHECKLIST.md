@@ -81,9 +81,12 @@ Kelulusan suite tidak otomatis mencentang semua requirement. Tidak ada approval 
   replay sesi dan queue sync. Batas per skenario tetap tercatat; bukan bukti browser atau policy akademik M2.
 - [x] Semua tests M0 tetap lulus (3 test dalam full suite).
 - [x] Pint lokal 134 file lulus; Composer valid dan JavaScript recovery 3 test lulus.
+- [x] Bukti browser **publik/tamu HTTP** tersedia: 11 pemeriksaan Chrome headless, 11 screenshot dan manifest SHA-256
+  (25 November, §10 laporan). Bukan kelulusan login/MFA/cookie sesi terautentikasi atau HTTPS.
 - [x] CI commit remediasi `015e792` lulus: [run 45356905502](https://github.com/Alfdhiw/LMS_SaaS/actions/runs/45356905502),
   job `smoke` dan `private-database-helper` sukses. Metadata diverifikasi 25 November; bukan CI perubahan approval ini.
 - [ ] Uji manual 3 sekolah sintetis dalam 4 host lokal selesai.
+  Bukti HTTP/tamu baru tidak mencentang skenario lengkap ini; HTTPS/login/MFA/recovery dua sesi masih terbuka.
 - [x] README, CHANGELOG, AGENTS lokal, indeks, gate/checklist/matrix dan README contract diselaraskan.
   AGENTS tetap di-ignore sesuai aturan Git; sinkronisasi lokalnya bukan bukti dokumen tersebut dilacak Git.
 - [x] Risiko MFA produksi, outbox, backup, RLS, dan data privasi tercatat; review memakai fixture sintetis saja.
@@ -109,3 +112,7 @@ dokumentasi approval 25 November. Snapshot historis berikut tidak menggantikan e
 
 Status **Closed by owner** mencatat keputusan pemilik pada 25 November, bukan klaim kriteria kelengkapan evidence
 di atas sudah terpenuhi. Browser/HTTPS tetap follow-up terbuka, dan catatan historis kehilangan data tidak diubah.
+
+**Evidence tambahan 25 November:** [manifest browser publik HTTP](../evidence/m1-browser/public-http-20261125T081910548Z-5e84915c/manifest.json)
+dan §10 [M1_FINAL_REVIEW.md](M1_FINAL_REVIEW.md). Browser bawaan tetap gagal terhubung; screenshot baru berasal dari
+Chrome lokal terpasang, bukan browser bawaan yang gagal. Tidak ada bukti HTTPS baru atau pengujian credential pilot.

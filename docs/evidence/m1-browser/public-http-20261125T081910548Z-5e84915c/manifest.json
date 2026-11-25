@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "startedAtUtc": "2026-11-25T08:19:10.571Z",
+  "timezone": "Asia/Jakarta",
+  "commit": "78385da5b25c2a69508b1df770dfcae15d6d7164",
+  "browser": "Installed Google Chrome, unified headless mode, fresh profile per case",
+  "browserVersion": "158.0.8127.37",
+  "transport": "HTTP only",
+  "credentialsEntered": false,
+  "formsSubmitted": false,
+  "tlsVerificationDisabled": false,
+  "hostMapping": "*.platform.test -> 127.0.0.1, browser-process only; Windows hosts unchanged",
+  "scope": "Public/guest browser rendering and unauthenticated redirects only; NOT authenticated tenant/session isolation or HTTPS acceptance.",
+  "inAppBrowser": "Unavailable before navigation: missing field sandboxPolicy (two attempts). Standalone Chrome CLI used instead.",
+  "notTested": [
+    "Trusted HTTPS and Secure cookies",
+    "Successful login and MFA",
+    "Authenticated A/B/C session isolation",
+    "Password change and old-session rejection",
+    "Two-session student/admin recovery"
+  ],
+  "results": [
+    {
+      "id": "1-login-admin",
+      "url": "http://admin.platform.test:8080/login",
+      "checkedAtUtc": "2026-11-25T08:19:28.638Z",
+      "httpProbe": {
+        "status": 200,
+        "loginRedirect": false
+      },
+      "title": "Login Platform",
+      "formAction": "http://admin.platform.test:8080/login",
+      "assertion": "Correct host-specific login form renders; no credentials entered.",
+      "screenshot": "1-login-admin.png",
+      "screenshotSha256": "643f1459f114ae60877ef0a3ebc706898d6573dcfc91cbb8cd4a46539fc4e054",
+      "status": "PASS"
+    },
+    {
+      "id": "2-login-sekolah-a",
+      "url": "http://sekolah-a.platform.test:8080/login",
+      "checkedAtUtc": "2026-11-25T08:19:39.913Z",
+      "httpProbe": {
+        "status": 200,
+        "loginRedirect": false
+      },
+      "title": "Login Sekolah",
+      "formAction": "http://sekolah-a.platform.test:8080/login",
+      "assertion": "Correct host-specific login form renders; no credentials entered.",
+      "screenshot": "2-login-sekolah-a.png",
+      "screenshotSha256": "3e72998fb4dc9f0846685f2dfb0d681e9da310ea2d1d607fab837070e27ab9d1",
+      "status": "PASS"
+    },
+    {
+      "id": "3-login-sekolah-b",
+      "url": "http://sekolah-b.platform.test:8080/login",
+      "checkedAtUtc": "2026-11-25T08:19:48.731Z",
+      "httpProbe": {
+        "status": 200,
+        "loginRedirect": false
+      },
+      "title": "Login Sekolah",
+      "formAction": "http://sekolah-b.platform.test:8080/login",
+      "assertion": "Correct host-specific login form renders; no credentials entered.",
+      "screenshot": "3-login-sekolah-b.png",
+      "screenshotSha256": "f2228b9a81fa2adba12141d3b4d7f0477ee846ce49a2298f702d519d413949f1",
+      "status": "PASS"
+    },
+    {
+      "id": "4-login-sekolah-c",
+      "url": "http://sekolah-c.platform.test:8080/login",
+      "checkedAtUtc": "2026-11-25T08:19:57.974Z",
+      "httpProbe": {
+        "status": 200,
+        "loginRedirect": false
+      },
+      "title": "Login Sekolah",
+      "formAction": "http://sekolah-c.platform.test:8080/login",
+      "assertion": "Correct host-specific login form renders; no credentials entered.",
+      "screenshot": "4-login-sekolah-c.png",
+      "screenshotSha256": "fa28b5c240f3ebe2e3d5aaf685d2a237870d9b01558d706a92fc7012c142544e",
+      "status": "PASS"
+    },
+    {
+      "id": "5-unknown-host",
+      "url": "http://unknown.platform.test:8080/login",
+      "checkedAtUtc": "2026-11-25T08:20:07.227Z",
+      "httpProbe": {
+        "status": 404,
+        "loginRedirect": false
+      },
+      "title": "Not Found",
+      "assertion": "Unregistered host renders the application Not Found page.",
+      "screenshot": "5-unknown-host.png",
+      "screenshotSha256": "4a43fb52a0ec9036bf8982ff35968caaf521cff18ace03945ecd474d1bd277c3",
+      "status": "PASS"
+    },
+    {
+      "id": "6-loopback",
+      "url": "http://127.0.0.1:8080/",
+      "checkedAtUtc": "2026-11-25T08:20:15.559Z",
+      "httpProbe": {
+        "status": 404,
+        "loginRedirect": false
+      },
+      "title": "Not Found",
+      "assertion": "Unregistered host renders the application Not Found page.",
+      "screenshot": "6-loopback.png",
+      "screenshotSha256": "4a43fb52a0ec9036bf8982ff35968caaf521cff18ace03945ecd474d1bd277c3",
+      "status": "PASS"
+    },
+    {
+      "id": "7-guest-dashboard-admin",
+      "url": "http://admin.platform.test:8080/dashboard",
+      "checkedAtUtc": "2026-11-25T08:20:27.651Z",
+      "httpProbe": {
+        "status": 302,
+        "loginRedirect": true
+      },
+      "title": "Login Platform",
+      "formAction": "http://admin.platform.test:8080/login",
+      "assertion": "Correct host-specific login form renders; no credentials entered.",
+      "screenshot": "7-guest-dashboard-admin.png",
+      "screenshotSha256": "643f1459f114ae60877ef0a3ebc706898d6573dcfc91cbb8cd4a46539fc4e054",
+      "status": "PASS"
+    },
+    {
+      "id": "8-guest-dashboard-sekolah-a",
+      "url": "http://sekolah-a.platform.test:8080/dashboard",
+      "checkedAtUtc": "2026-11-25T08:20:40.755Z",
+      "httpProbe": {
+        "status": 302,
+        "loginRedirect": true
+      },
+      "title": "Login Sekolah",
+      "formAction": "http://sekolah-a.platform.test:8080/login",
+      "assertion": "Correct host-specific login form renders; no credentials entered.",
+      "screenshot": "8-guest-dashboard-sekolah-a.png",
+      "screenshotSha256": "3e72998fb4dc9f0846685f2dfb0d681e9da310ea2d1d607fab837070e27ab9d1",
+      "status": "PASS"
+    },
+    {
+      "id": "9-guest-dashboard-sekolah-b",
+      "url": "http://sekolah-b.platform.test:8080/dashboard",
+      "checkedAtUtc": "2026-11-25T08:20:52.185Z",
+      "httpProbe": {
+        "status": 302,
+        "loginRedirect": true
+      },
+      "title": "Login Sekolah",
+      "formAction": "http://sekolah-b.platform.test:8080/login",
+      "assertion": "Correct host-specific login form renders; no credentials entered.",
+      "screenshot": "9-guest-dashboard-sekolah-b.png",
+      "screenshotSha256": "f2228b9a81fa2adba12141d3b4d7f0477ee846ce49a2298f702d519d413949f1",
+      "status": "PASS"
+    },
+    {
+      "id": "10-guest-dashboard-sekolah-c",
+      "url": "http://sekolah-c.platform.test:8080/dashboard",
+      "checkedAtUtc": "2026-11-25T08:21:04.084Z",
+      "httpProbe": {
+        "status": 302,
+        "loginRedirect": true
+      },
+      "title": "Login Sekolah",
+      "formAction": "http://sekolah-c.platform.test:8080/login",
+      "assertion": "Correct host-specific login form renders; no credentials entered.",
+      "screenshot": "10-guest-dashboard-sekolah-c.png",
+      "screenshotSha256": "fa28b5c240f3ebe2e3d5aaf685d2a237870d9b01558d706a92fc7012c142544e",
+      "status": "PASS"
+    },
+    {
+      "id": "11-recovery-public-http",
+      "url": "http://sekolah-a.platform.test:8080/recovery/school-assisted",
+      "checkedAtUtc": "2026-11-25T08:21:13.388Z",
+      "httpProbe": {
+        "status": 200,
+        "loginRedirect": false
+      },
+      "title": "Bantuan password siswa",
+      "assertion": "Public recovery page renders; HTTPS requirement is visible; no request or reset submitted.",
+      "screenshot": "11-recovery-public-http.png",
+      "screenshotSha256": "74b0bbcac399941c8fff06ee2a5062e9603effca3091374229a16cc5a34829c4",
+      "status": "PASS"
+    }
+  ],
+  "status": "PASS_PUBLIC_HTTP_ONLY",
+  "completedAtUtc": "2026-11-25T08:21:13.389Z"
+}

@@ -18,6 +18,9 @@ dari keputusan penutupan pemilik; tidak ada waiver requirement atau izin produks
 Record lengkap ada pada bagian **Approval akhir PR6/M1 — 25 November 2026** di bawah. Bagian review terdahulu
 adalah riwayat bertanggal; status "menunggu/belum disetujui" di sana tidak membatalkan approval akhir ini.
 
+Pembaruan evidence browser: 11 pemeriksaan Chrome publik/tamu HTTP lulus dengan screenshot/manifest (§10 laporan).
+Ini bukan kelulusan HTTPS, MFA/login atau sesi lintas sekolah; record approval dan batas acceptance tetap sama.
+
 ## Keputusan yang harus direview manusia
 
 | Area | Accepted baseline | Hal yang diverifikasi |
@@ -624,5 +627,18 @@ insiden PR5. Follow-up browser/HTTPS, konsistensi validasi password lintas activ
 tetap tercatat pada §9 [M1_FINAL_REVIEW.md](M1_FINAL_REVIEW.md). Tidak ada waiver atau keputusan arsitektur baru.
 Dokumentasi approval ini belum di-commit/push; CI kode tidak otomatis membuktikan perubahan dokumentasi berikutnya.
 Tidak ada kode, schema/migration, data, role/HBA, Docker, credential atau permission runtime yang diubah.
+
+## Bukti browser publik HTTP — 25 November 2026
+
+Permintaan pengguna untuk menyediakan bukti browser ditindaklanjuti melalui Chrome lokal terpasang setelah
+browser bawaan gagal sebelum navigasi (`missing field sandboxPolicy`, dua percobaan). Container LMS yang berhenti
+24 jam sebelumnya dinyalakan dengan `docker compose start`; volume lama dipertahankan, tanpa recreate/migration/seed.
+Enam HTTP host smoke lulus. Sebelas kasus browser publik/tamu lulus dan mempunyai screenshot serta manifest SHA-256;
+detail: §10 [M1_FINAL_REVIEW.md](M1_FINAL_REVIEW.md). Tidak memasukkan password/OTP atau mengirim form apa pun.
+
+Status evidence: **PASS_PUBLIC_HTTP_ONLY**. Ini bukan bukti sesi terautentikasi/HTTPS. Tidak ada sertifikat atau trust
+Windows yang diubah; permintaan izin sertifikat lokal masih menunggu jawaban pengguna. Tidak ada code/schema/Docker
+M0, role/grant, credential pilot, keputusan arsitektur atau status approval yang diubah. Pengecualian Git dibatasi
+ke screenshot publik dan manifest; raw DOM/header/cookie, certificate/key dan profil tidak dijadikan artifact.
 
 Setelah perubahan keputusan, update status di dokumen asli dan `docs/DOCUMENT_INDEX.md`; simpan riwayat, jangan hapus versi lama. Draft migration disesuaikan jika review mengubah schema.

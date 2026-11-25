@@ -1,6 +1,6 @@
 # LMS SaaS Multi-Sekolah — M1 (lokal/sintetis)
 
-**Status 25 November 2026:** PR6 **Approved** dan M1 **Closed by owner** berdasarkan approval akhir pengguna, untuk pengembangan lokal dengan data sintetis. Commit remediasi: `015e792`; CI commit tersebut sukses. Penutupan milestone tidak berarti seluruh bukti penerimaan teknis lengkap: demonstrasi browser empat host/HTTPS masih belum dibuktikan, dan aplikasi belum siap produksi atau data siswa nyata. M2 belum dimulai/diizinkan. Lihat [approval dan catatan penutupan](docs/runbooks/M1_FINAL_REVIEW.md#9-approval-akhir-pr6m1--25-november-2026) serta [acceptance checklist](docs/runbooks/M1_ACCEPTANCE_CHECKLIST.md).
+**Status 25 November 2026:** PR6 **Approved** dan M1 **Closed by owner** berdasarkan approval akhir pengguna, untuk pengembangan lokal dengan data sintetis. Commit remediasi: `015e792`; CI commit tersebut sukses. Bukti browser HTTP/tamu kini tersedia (11 pemeriksaan, §10 laporan), tetapi demonstrasi login/MFA/recovery melalui HTTPS belum lengkap; aplikasi belum siap produksi atau data siswa nyata. M2 belum dimulai/diizinkan. Lihat [approval dan catatan penutupan](docs/runbooks/M1_FINAL_REVIEW.md#9-approval-akhir-pr6m1--25-november-2026) serta [acceptance checklist](docs/runbooks/M1_ACCEPTANCE_CHECKLIST.md).
 
 ## 1. Apa yang tersedia
 
@@ -185,6 +185,26 @@ file `.env` diganti fixture sintetis, dan storage sementara berada di memori. Te
 migration, lalu menguji login, sesi lintas tenant, provisioning/aktivasi, dan audit melalui koneksi runtime. Server
 dan jaringan sementara dibersihkan setelah tes. Tes ini tidak termasuk suite default `php artisan test`; jalankan
 perintah di atas secara eksplisit. Tes ini tidak menggantikan uji HTTPS atau membuktikan RLS.
+
+### Bukti browser publik — HTTP saja
+
+Pengujian 25 November menggunakan Chrome terpasang dalam mode headless dengan profil kosong per kasus,
+bukan DOM mock. Sebelas pemeriksaan publik/tamu lulus dan screenshot/manifest tersimpan pada
+[`docs/evidence/m1-browser/public-http-20261125T081910548Z-5e84915c/manifest.json`](docs/evidence/m1-browser/public-http-20261125T081910548Z-5e84915c/manifest.json).
+Detail dan batasnya: §10 [M1_FINAL_REVIEW.md](docs/runbooks/M1_FINAL_REVIEW.md).
+
+Untuk mengulang setelah container LMS yang sudah ada berjalan dan tiga host sintetis tersedia:
+
+```powershell
+$env:M1_BROWSER_VERSION = (Get-Item 'C:\Program Files\Google\Chrome\Application\chrome.exe').VersionInfo.ProductVersion
+node tests/Support/m1_browser_guest_evidence.mjs
+```
+
+Runner hanya melakukan GET publik: login empat host, unknown/loopback, redirect dashboard tamu, dan form recovery.
+DNS dipetakan hanya dalam proses browser. Tidak memasukkan credential, mengirim form, mengubah Windows hosts,
+memasang sertifikat, menonaktifkan TLS, atau menguji sesi terautentikasi. Hasil **bukan** kelulusan browser/HTTPS
+lengkap. Profil sementara dibersihkan; raw DOM/header/cookie tidak disimpan. Hanya PNG publik dan manifest aman
+yang dibuka secara spesifik untuk Git. Jangan gunakan screenshot akun nyata sebagai pengganti fixture sintetis.
 
 Setup M0/CI standar belum otomatis membuat role dan secret terpisah pada instalasi baru; jangan menganggap template
 override saja cukup untuk instalasi baru atau produksi. Grant DML pada tabel non-audit masih luas, dan owner/superuser

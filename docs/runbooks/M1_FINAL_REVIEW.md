@@ -423,3 +423,95 @@ CI `015e792` tidak membuktikan perubahan dokumentasi approval yang belum di-comm
    push/merge/tag oleh Codex. Risiko: clone lain masih menampilkan status approval lama jika perubahan hanya lokal.
 
 Saran commit: `docs: record final PR6 approval and M1 closure`.
+
+## 10. Bukti browser publik HTTP — 25 November 2026
+
+### 10.1 Hasil aktual dan cakupan
+
+**11 pemeriksaan browser lulus, status `PASS_PUBLIC_HTTP_ONLY`**. Pengujian berlangsung 25 November 2026
+pukul **15:19:10–15:21:13 WIB**, aplikasi pada commit `78385da5b25c2a69508b1df770dfcae15d6d7164`, branch
+`Milestone-1`. Chrome terpasang **158.0.8127.37**, viewport 1280×900, profil kosong baru untuk setiap kasus.
+Ini browser sungguhan dalam mode headless, bukan DOM mock; metode mengacu
+[dokumentasi Chrome Headless](https://developer.chrome.com/docs/automation-and-testing/headless).
+
+Browser bawaan dicoba dua kali melalui skill browser tetapi gagal sebelum navigasi: `missing field sandboxPolicy`.
+Tidak ada interaksi atau screenshot dari browser bawaan yang gagal tersebut. Fallback memakai Chrome Windows lokal
+melalui CLI, bukan kontrol alternatif atas browser bawaan, tanpa download browser/package tambahan.
+
+| Skenario | Hasil browser aktual | Jumlah |
+|---|---|---|
+| `/login` pusat dan sekolah A/B/C | Form dan judul sesuai area, identifier email vs username, subtitle sekolah dan form action pada host yang benar | 4 PASS |
+| Unknown host `/login` dan loopback `/` | Halaman aplikasi `Not Found` dirender | 2 PASS |
+| `/dashboard` pusat dan sekolah A/B/C sebagai tamu | Redirect ke login pada host yang sama; form login dirender, tidak ada dashboard protected | 4 PASS |
+| `/recovery/school-assisted` sekolah A sebagai tamu | Form publik dirender, kebutuhan HTTPS terlihat, section penyelesaian tersembunyi; tidak submit | 1 PASS |
+
+Status HTTP pada manifest adalah **preflight GET independen** (200/404/302), bukan network capture dari browser.
+Browser memverifikasi DOM hasil render dan mengambil screenshot. Profil kosong per kasus **bukan** bukti isolasi
+cookie/sesi setelah login. Tidak ada password/OTP yang dimasukkan, form yang dikirim, atau akun yang dibuat/diubah.
+
+### 10.2 Artifact tersanitasi
+
+- [Manifest hasil, URL kasus, timestamp dan SHA-256 11 screenshot](../evidence/m1-browser/public-http-20261125T081910548Z-5e84915c/manifest.json).
+- [Screenshot login pusat](../evidence/m1-browser/public-http-20261125T081910548Z-5e84915c/1-login-admin.png).
+- [Screenshot login sekolah A](../evidence/m1-browser/public-http-20261125T081910548Z-5e84915c/2-login-sekolah-a.png),
+  [sekolah B](../evidence/m1-browser/public-http-20261125T081910548Z-5e84915c/3-login-sekolah-b.png),
+  [sekolah C](../evidence/m1-browser/public-http-20261125T081910548Z-5e84915c/4-login-sekolah-c.png).
+- [Screenshot unknown host](../evidence/m1-browser/public-http-20261125T081910548Z-5e84915c/5-unknown-host.png)
+  dan [form recovery publik HTTP](../evidence/m1-browser/public-http-20261125T081910548Z-5e84915c/11-recovery-public-http.png).
+
+Semua screenshot adalah hasil Chrome asli yang tidak diedit; halaman tidak diisi credential/data siswa.
+Manifest memuat hash untuk integritas file, bukan tanda tangan/attestation browser. Screenshot utama diperiksa
+secara visual. Raw HTML/CSRF hanya diproses di memori, tidak dicetak atau disimpan; header/cookie dan stderr browser
+tidak menjadi artifact. Profil sementara dibersihkan sesudah run; Windows hosts/trust sertifikat tidak diubah.
+
+### 10.3 Pengulangan dan operasi yang benar-benar dijalankan
+
+```powershell
+# Tidak menjalankan setup, migrate, seed, restore atau recreate.
+docker compose start
+.\scripts\m1-host-smoke.ps1
+$env:M1_BROWSER_VERSION = (Get-Item 'C:\Program Files\Google\Chrome\Application\chrome.exe').VersionInfo.ProductVersion
+node --check tests/Support/m1_browser_guest_evidence.mjs
+node tests/Support/m1_browser_guest_evidence.mjs
+```
+
+Kondisi awal: tujuh container lama berhenti sekitar 24 jam, volume PostgreSQL/Redis lama masih ada.
+`docker compose start` menyalakan **container yang sama**, tidak menjalankan `up`, membuat ulang database atau
+mengubah konfigurasi Docker M0. Enam HTTP host smoke lulus sesudah start. Koneksi/hak audit runtime diperiksa
+read-only melalui `scripts/m1-check-runtime.php` pada app/worker/scheduler. `docker compose config --quiet` lulus.
+
+Runner melakukan GET ke host lokal yang eksplisit dan memetakan DNS hanya dalam proses Chrome. Setiap run membuat
+direktori artifact baru dan menolak overwrite. PNG baru disalin dari profil sementara hanya setelah assertion DOM
+lulus; cleanup memvalidasi direktori temporer sebelum menghapusnya. Screenshot sementara tidak dipublikasikan
+sebagai artifact bila assertion/navigasi gagal atau debug page terdeteksi. Tidak memakai
+`--ignore-certificate-errors`, `--no-sandbox`, atau TLS bypass.
+
+Pengujian tambahan pada tugas ini: `node --check` runner lulus, `node --test tests/Support/school_recovery_ui.test.js`
+**3 test lulus**, validasi **11 SHA-256 screenshot lulus**, serta koneksi/hak audit runtime app/worker/scheduler
+**ketiganya lulus**. Validasi **26 link lokal**, aturan ignore dan `git diff --check` juga lulus. Full PHP/PostgreSQL suite tidak
+diulang karena tidak ada perubahan source aplikasi; angka regresi §8 tetap evidence 24 November, bukan run baru.
+
+### 10.4 Batas dan blocker lanjutan
+
+- **Belum diuji:** HTTPS tepercaya/Secure cookie, login sukses dan MFA, sesi authenticated lintas host, perubahan
+  password dan penolakan sesi lama, serta recovery siswa/admin dua sesi. Halaman/form yang dirender tidak membuktikan
+  flow submit tersebut. Checkbox demonstrasi lengkap tetap belum dicentang; approval PR6/M1 tidak diubah.
+- Nginx lokal hanya listen HTTP; sertifikat/trust lokal belum tersedia pada pemeriksaan. Izin pemasangan sementara
+  CA pengujian pada trust store CurrentUser Windows sudah diminta, belum dianggap diberikan. Tidak memasang root CA,
+  memodifikasi trusted proxy, membuka interstitial sertifikat, atau mematikan verifikasi TLS tanpa persetujuan.
+- Skill browser mewajibkan langkah akhir submit perubahan password diserahkan kepada pengguna; tidak boleh diklaim
+  sudah diuji melalui browser hanya dengan menggantikannya memakai request API atau test service.
+- Bukti ini belum di-commit/push dan tidak mempunyai hasil CI sendiri. Tidak ada data siswa asli atau pekerjaan M2.
+
+### 10.5 File dan analisis dampak
+
+- Baru: `tests/Support/m1_browser_guest_evidence.mjs`, 11 PNG dan satu `manifest.json` pada folder evidence di atas.
+- Diperbarui: `.gitignore`, README, CHANGELOG, DOCUMENT_INDEX, architecture gate, acceptance checklist, matrix dan
+  laporan ini. Ignore hanya membuka PNG publik dan manifest pada prefix run yang spesifik; DOM/cookie/certificate/key
+  dan profil tidak dibuka untuk Git. Bukti login/HTTPS selanjutnya perlu lokasi/redaction yang direview, bukan
+  otomatis memakai whitelist publik ini.
+- Tidak berubah: source aplikasi/PHP/views/routes/permission, schema/migration, dependency/lockfile, .env, konfigurasi
+  Docker/HBA/role/grant, credential akun pilot dan keputusan arsitektur. GET dapat membuat sesi web tamu normal;
+  tidak mengubah akun atau state bisnis sekolah. Container lama sekarang berjalan untuk pengujian.
+
+Saran commit: `test: add sanitized public HTTP browser evidence for M1`.

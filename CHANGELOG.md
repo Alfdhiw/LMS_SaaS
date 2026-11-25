@@ -2,6 +2,12 @@
 
 ## Unreleased — M1 PR6 (approved 25 November 2026)
 
+- Bukti browser publik HTTP ditambahkan: 11 pemeriksaan Chrome headless lulus, dengan 11 screenshot dan manifest
+  SHA-256 pada commit aplikasi `78385da`. Runner read-only tanpa dependency baru tersedia untuk pengulangan.
+  Ini bukan bukti HTTPS/login/MFA/recovery dua sesi; checkbox demonstrasi lengkap tetap terbuka.
+- Browser bawaan gagal sebelum navigasi pada dua percobaan; fallback memakai Chrome lokal terpasang dengan profil
+  kosong per kasus. Container lama yang berhenti dinyalakan melalui `docker compose start`, tanpa recreate/migration.
+  Pengecualian ignore hanya ditambah untuk PNG publik/manifest; DOM, cookie, certificate/key dan profil tetap tidak dilacak.
 - Pengguna memberi approval akhir PR6/M1 pada 25 November 2026. PR6 berstatus Approved dan M1 Closed by owner
   untuk pengembangan lokal/sintetis; kelengkapan evidence teknis dicatat terpisah dan tidak dicentang otomatis.
 - Commit remediasi `015e792` sudah tersedia. Metadata run GitHub Actions `45356905502` diverifikasi pada

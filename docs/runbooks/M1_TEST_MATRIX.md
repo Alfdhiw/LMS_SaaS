@@ -6,6 +6,10 @@ terverifikasi sukses pada kedua job. Approval bukan bukti semua evidence lengkap
 dibuktikan. Expected matrix, baseline PRD/ADR/ERD, dan gate produksi tidak diubah. Keputusan lengkap di §9
 [M1_FINAL_REVIEW.md](M1_FINAL_REVIEW.md). M2 belum diizinkan/dimulai.
 
+**Evidence tambahan browser publik HTTP:** 11 kasus Chrome headless lulus dengan screenshot/manifest di §10 laporan.
+Scope hanya rendering publik dan redirect tamu, bukan auth/session isolation setelah login atau HTTPS. Tidak mengganti
+expected matrix, feature tests PostgreSQL, atau demonstrasi lengkap yang masih terbuka.
+
 `php artisan test` harus berjalan dengan DB `lms_saas_test` (konfigurasi `phpunit.xml` M0). Jangan memakai akun sekolah nyata. Semua test negatif harus memverifikasi **tidak terjadi perubahan DB** setelah request ditolak, bukan hanya HTTP status.
 
 | ID | Scenario | Expected |
@@ -128,3 +132,14 @@ middleware job, dan alur perubahan password; test runtime tetap terpisah dari su
 Rujuk [M1_FINAL_REVIEW.md](M1_FINAL_REVIEW.md) untuk temuan, prioritas, dan record approval akhir 25 November.
 Penutupan oleh pemilik dicatat terpisah dari kelengkapan bukti teknis; expected matrix tidak diturunkan dan poin
 yang belum dibuktikan tidak dianggap lulus. Riwayat di blok evidence 24 November tetap dipertahankan.
+
+### Tambahan browser publik HTTP — 25 November 2026
+
+Chrome 158.0.8127.37, profil kosong baru per kasus, localhost port 8080. [Manifest + SHA-256 screenshot](../evidence/m1-browser/public-http-20261125T081910548Z-5e84915c/manifest.json).
+Empat form login 200, dua unknown/loopback 404, empat dashboard tamu redirect ke login host yang sama, dan satu
+halaman publik recovery tanpa submit: **11 lulus**. Status HTTP berasal dari preflight GET independen; assertion DOM
+dan screenshot berasal dari browser. Jangan menyebut preflight sebagai network capture browser.
+
+Bukti ini melengkapi UI publik HOST01/UI02 hanya pada scope tamu. AUTH01–07, MFA, cookie authenticated, password
+change dan recovery dua sesi tetap mengandalkan evidence otomatis existing sampai ada demo browser tambahan.
+Menggunakan profil kosong terpisah bukan bukti cookie/session isolation lintas host. HTTPS belum disiapkan/diuji.

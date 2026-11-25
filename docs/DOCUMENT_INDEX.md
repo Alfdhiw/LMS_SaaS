@@ -5,6 +5,7 @@
 | Tanggal disusun | 5 November 2026 |
 | Status indeks | Accepted — baseline arsitektur dan ERD disetujui 8 November 2026 |
 | Status milestone — 25 November 2026 | PR6 Approved; M1 Closed by owner untuk lokal/sintetis; evidence browser/HTTPS belum lengkap; bukan production approval |
+| Bukti browser publik — 25 November 2026 | 11 pemeriksaan HTTP/tamu Chrome lulus; screenshot dan manifest tersedia; bukan login/HTTPS acceptance lengkap |
 | Tujuan | Satu titik referensi bagi Codex untuk versi dokumen, status persetujuan, dan prioritas sumber |
 
 > `DOCUMENT_INDEX.md` mencatat hasil review dan **tidak menyetujui dokumen secara otomatis**. Status `Accepted` di bawah merujuk pada approval record di `docs/runbooks/M1_ARCHITECTURE_GATE.md`, bukan pada perubahan tanggal atau urutan file. Migration produksi tetap mengikuti acceptance gate dan runbook M1.
@@ -138,3 +139,15 @@ M2, tag/release, commit/push/merge otomatis. Pembaruan approval ini belum mempun
 Label status pada enam baseline aktif dan referensi header ERD lama diselaraskan dengan status Accepted yang sudah
 tercatat; tidak mengubah keputusan/desain. File baseline, AGENTS dan master plan tetap di-ignore untuk Git sesuai
 aturan yang ada. Approval/status kanonis di gate/indeks/laporan tetap dilacak Git; paket overlay historis tidak diubah.
+
+## N. Bukti browser publik HTTP — 25 November 2026
+
+§10 [M1_FINAL_REVIEW.md](runbooks/M1_FINAL_REVIEW.md) mencatat 11 pemeriksaan browser Chrome headless yang
+benar-benar dijalankan pada aplikasi commit `78385da5b25c2a69508b1df770dfcae15d6d7164`. Bukti tersedia sebagai
+11 screenshot publik dan [manifest SHA-256](evidence/m1-browser/public-http-20261125T081910548Z-5e84915c/manifest.json).
+Runner `tests/Support/m1_browser_guest_evidence.mjs` dapat diulang tanpa package baru; tidak login/mengirim form.
+
+Ini memperbarui catatan lama "tidak ada bukti browser" hanya untuk scope publik/tamu HTTP. Browser bawaan gagal
+sebelum navigasi; fallback adalah Chrome lokal terpasang. Evidence login/MFA, sesi terautentikasi lintas sekolah,
+ganti password, recovery dua sesi dan HTTPS tepercaya **belum tersedia**. Approval M1 tidak berubah; checkbox
+demonstrasi lengkap tidak dicentang. Izin trust sertifikat Windows telah diminta, belum dianggap diberikan.

@@ -23,6 +23,15 @@
 !/docs/runbooks/M1_ACCEPTANCE_CHECKLIST.md
 !/docs/runbooks/M1_TEST_MATRIX.md
 !/docs/runbooks/M1_FINAL_REVIEW.md
+# Only sanitized public-browser evidence; never raw DOM, cookies, certificates, or profiles.
+!/docs/evidence/
+/docs/evidence/*
+!/docs/evidence/m1-browser/
+/docs/evidence/m1-browser/*
+!/docs/evidence/m1-browser/public-http-*/
+/docs/evidence/m1-browser/public-http-*/*
+!/docs/evidence/m1-browser/public-http-*/*.png
+!/docs/evidence/m1-browser/public-http-*/manifest.json
 /.phpunit-watcher.yml
 /storage/*.key
 /storage/logs/*
