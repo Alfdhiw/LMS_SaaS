@@ -1,5 +1,11 @@
 # M1 TEST MATRIX — Wajib PostgreSQL + Laravel Feature Tests
 
+**Status 25 November 2026:** PR6 Approved; M1 Closed by owner atas approval akhir pengguna untuk lokal/sintetis.
+Commit remediasi `015e792` sudah di-commit dan [CI run 45356905502](https://github.com/Alfdhiw/LMS_SaaS/actions/runs/45356905502)
+terverifikasi sukses pada kedua job. Approval bukan bukti semua evidence lengkap: browser empat host/HTTPS belum
+dibuktikan. Expected matrix, baseline PRD/ADR/ERD, dan gate produksi tidak diubah. Keputusan lengkap di §9
+[M1_FINAL_REVIEW.md](M1_FINAL_REVIEW.md). M2 belum diizinkan/dimulai.
+
 `php artisan test` harus berjalan dengan DB `lms_saas_test` (konfigurasi `phpunit.xml` M0). Jangan memakai akun sekolah nyata. Semua test negatif harus memverifikasi **tidak terjadi perubahan DB** setelah request ditolak, bukan hanya HTTP status.
 
 | ID | Scenario | Expected |
@@ -45,12 +51,13 @@
 
 Snapshot berikut adalah review awal commit `b07ebdf`; pemetaan di bawah sudah diperbarui untuk remediasi F01–F03
 yang diizinkan pengguna. Hasil regresi remediasi dan batasnya dicatat pada §8 [M1_FINAL_REVIEW.md](M1_FINAL_REVIEW.md).
-CI snapshot lama tidak membuktikan perubahan working tree yang belum di-commit/push.
+CI snapshot lama tidak membuktikan remediasi; status commit/CI terbaru sudah diperbarui pada catatan 25 November di atas.
 
 **Remediasi final:** full suite **100 test/791 assertion lulus**, 311,85 detik (termasuk 9 DB contract, 11 password,
 8 security closure, 2 queue sync dan 3 architecture tests); runtime terisolasi **2 test/51 assertion lulus**.
 Pint **134 file**, JavaScript **3 test**, HTTP host smoke **6 pemeriksaan** dan Composer valid; semua lulus lokal.
-Tidak ada bukti baru browser/HTTPS atau CI commit remediasi.
+Pada handoff 24 November belum ada bukti baru browser/HTTPS atau CI remediasi; CI kemudian terverifikasi
+25 November untuk `015e792`. Browser/HTTPS masih belum mempunyai evidence; suite lokal tidak diulang pada tugas approval.
 
 ```text
 Branch/Commit: Milestone-1 / b07ebdf182080f184065caf5b60a2b81c9efafaa
@@ -115,7 +122,9 @@ middleware job, dan alur perubahan password; test runtime tetap terpisah dari su
 - Assertion negatif memeriksa state bisnis yang relevan, bukan hanya status. Audit/idempotency penolakan boleh bertambah
   sesuai kontrak; tidak mengharuskan seluruh database identik sesudah aksi yang memang wajib diaudit.
 - Checklist dan laporan mempertahankan insiden database PR5; suite hijau sekarang bukan bukti data lama tidak pernah hilang.
-- Browser empat host/HTTPS dan CI commit remediasi masih memerlukan evidence terpisah; tidak dicentang oleh test lokal.
+- Browser empat host/HTTPS masih memerlukan evidence terpisah; tidak dicentang oleh test lokal maupun CI.
+  CI commit remediasi sudah terverifikasi pada 25 November, bukan hasil pengujian browser.
 
-Rujuk [M1_FINAL_REVIEW.md](M1_FINAL_REVIEW.md) untuk temuan, prioritas, dan syarat penutupan. Semua poin applicable
-harus memiliki bukti sebelum PR6/M1 di-approve; jangan menghapus atau menurunkan expected matrix untuk membuatnya lulus.
+Rujuk [M1_FINAL_REVIEW.md](M1_FINAL_REVIEW.md) untuk temuan, prioritas, dan record approval akhir 25 November.
+Penutupan oleh pemilik dicatat terpisah dari kelengkapan bukti teknis; expected matrix tidak diturunkan dan poin
+yang belum dibuktikan tidak dianggap lulus. Riwayat di blok evidence 24 November tetap dipertahankan.

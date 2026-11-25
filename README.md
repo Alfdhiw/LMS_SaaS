@@ -1,6 +1,6 @@
-# LMS SaaS Multi-Sekolah — Milestone M0 Starter
+# LMS SaaS Multi-Sekolah — M1 (lokal/sintetis)
 
-**Status:** M1 development baseline; aplikasi belum siap produksi. PR5 disetujui pengguna pada 21 November 2026. Remediasi temuan final review F01–F03 (ganti password, boundary modul, dan coverage keamanan) sudah diimplementasikan dengan izin pengguna. Bukti browser/HTTPS, CI commit remediasi, serta approval akhir PR6/M1 masih terbuka. Lihat [laporan final review](docs/runbooks/M1_FINAL_REVIEW.md) dan [acceptance checklist](docs/runbooks/M1_ACCEPTANCE_CHECKLIST.md).
+**Status 25 November 2026:** PR6 **Approved** dan M1 **Closed by owner** berdasarkan approval akhir pengguna, untuk pengembangan lokal dengan data sintetis. Commit remediasi: `015e792`; CI commit tersebut sukses. Penutupan milestone tidak berarti seluruh bukti penerimaan teknis lengkap: demonstrasi browser empat host/HTTPS masih belum dibuktikan, dan aplikasi belum siap produksi atau data siswa nyata. M2 belum dimulai/diizinkan. Lihat [approval dan catatan penutupan](docs/runbooks/M1_FINAL_REVIEW.md#9-approval-akhir-pr6m1--25-november-2026) serta [acceptance checklist](docs/runbooks/M1_ACCEPTANCE_CHECKLIST.md).
 
 ## 1. Apa yang tersedia
 
@@ -227,9 +227,11 @@ Job GitHub Actions `private-database-helper` menjalankan uji helper dan lab SCRA
 runner Linux. Semua script dan fixture sintetis yang dibutuhkan harus ikut di-commit; hasil GitHub baru tersedia
 setelah perubahan di-commit dan di-push oleh pengguna.
 
-Final review 24 November 2026 memverifikasi [run M0 checks untuk commit b07ebdf](https://github.com/Alfdhiw/LMS_SaaS/actions/runs/45137773386):
-job `private-database-helper` dan `smoke` sukses. Bukti ini berlaku untuk commit tersebut, bukan jaminan coverage
-seluruh acceptance matrix atau hasil CI bagi perubahan kode/dokumentasi remediasi yang belum di-commit/push.
+Final review awal memverifikasi [run untuk baseline b07ebdf](https://github.com/Alfdhiw/LMS_SaaS/actions/runs/45137773386).
+Pada 25 November 2026, [run M0 checks untuk commit remediasi 015e792](https://github.com/Alfdhiw/LMS_SaaS/actions/runs/45356905502)
+juga diverifikasi sukses: job `private-database-helper` dan `smoke`, termasuk langkah Pint dan All tests, sukses.
+Run selesai 24 November pukul 15:34:43 WIB. Ini bukti commit tersebut, bukan demonstrasi browser/HTTPS atau hasil CI
+bagi perubahan dokumentasi approval 25 November yang belum di-commit/push. Tidak ada workflow/push/merge yang dijalankan oleh Codex.
 
 Lab `./tests/Support/m1-scram-synthetic-test.ps1` menguji usulan SCRAM, bootstrap, dump/restore, dan rollback
 pada container sementara tanpa jaringan. Kandidat `database/security/m1_pg_hba_scram_local.conf` mempertahankan tujuh

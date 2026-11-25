@@ -1,17 +1,19 @@
-# M1 FINAL REVIEW — 24 November 2026
+# M1 FINAL REVIEW & CLOSURE — 25 November 2026
 
 | Metadata | Hasil |
 |---|---|
-| Scope | Final review PR6 dan kesiapan penutupan M1, bukan implementasi M2 |
-| Branch / commit kode | `Milestone-1` / `b07ebdf182080f184065caf5b60a2b81c9efafaa` |
-| Status technical review | Remediasi F01–F03 diimplementasikan; bukti penutupan belum lengkap (§8) |
-| Approval PR6 / M1 | Belum diberikan; permintaan melakukan review bukan approval hasil review |
+| Scope | Final review, approval PR6 dan penutupan M1 lokal/sintetis, bukan implementasi M2 |
+| Branch / commit kode yang disetujui | `Milestone-1` / `015e792f350536db14f4be049624e6d0e82e95b2` |
+| Baseline review awal 24 November | `b07ebdf182080f184065caf5b60a2b81c9efafaa` |
+| Status technical review | F01–F03 diremediasi dan diuji; CI commit remediasi sukses; bukti browser/HTTPS belum lengkap |
+| Approval PR6 / M1 | PR6 Approved; M1 Closed by owner — approval akhir pengguna 25 November 2026 (§9), lokal/sintetis |
 | Produksi / data siswa nyata | Tidak disetujui |
-| Lingkungan | Docker Desktop Linux lokal, Laravel 13.40.0, PHP 8.4.27, PostgreSQL 17.11 |
+| Lingkungan review 24 November | Docker Desktop Linux lokal, Laravel 13.40.0, PHP 8.4.27, PostgreSQL 17.11 |
 
-**Status terbaru:** §8 mencatat remediasi yang telah diizinkan pengguna setelah review awal. Bagian 1–7 di bawah
-tetap menjadi snapshot commit `b07ebdf` sebelum remediasi, bukan klaim fitur/test tersebut masih belum tersedia.
-Persetujuan implementasi bukan approval akhir PR6/M1. Working tree baru belum memiliki commit/CI sendiri.
+**Status terbaru:** §9 mencatat approval akhir PR6/M1 dan verifikasi CI commit remediasi pada 25 November 2026.
+Bagian 1–7 adalah snapshot review awal `b07ebdf`; §8 adalah handoff remediasi 24 November sebelum commit `015e792`.
+Pernyataan "belum disetujui/belum di-commit" di riwayat tersebut bukan status terbaru. Keputusan penutupan pemilik
+dicatat terpisah dari kelengkapan evidence: browser/HTTPS belum dibuktikan, bukan lulus atau mendapat waiver.
 
 ## 1. Kesimpulan
 
@@ -252,7 +254,7 @@ Probe `docker exec` worker yang dikirim terlalu dekat sinyal restart terputus de
 berhenti normal untuk restart. Ini probe diagnostik, bukan job/test gagal; verifikasi diulang dan lulus sesudah worker
 running. Snapshot bisnis penutup juga tetap 3 tenant/4 user/5 migration/14 audit platform/5 audit tenant.
 
-### 8.5 Gate yang tetap terbuka
+### 8.5 Gate saat handoff 24 November — pembaruan keputusan di §9
 
 1. Demonstrasi browser empat host/HTTPS (F04) belum dijalankan dalam remediasi ini. Kegagalan koneksi alat pada
    review awal tetap tercatat; tidak ada bukti screenshot/cookie/login baru. Konfigurasi TLS tidak diubah.
@@ -265,10 +267,11 @@ running. Snapshot bisnis penutup juga tetap 3 tenant/4 user/5 migration/14 audit
 
 Saran commit setelah review: `feat: close M1 authentication and boundary review gaps`.
 
-### 8.6 Inventory file terhadap baseline review
+### 8.6 Inventory file terhadap baseline review — snapshot sebelum commit remediasi
 
 `M` = modifikasi, `D` = path lama dipindah, `??` = file baru belum dilacak. Inventory mencakup dokumentasi review
-yang sudah dirty sebelum remediasi. Git dapat menampilkan lima pemindahan sebagai rename setelah staging;
+yang sudah dirty sebelum remediasi. Ini snapshot 24 November, bukan status Git 25 November; file telah masuk
+commit `015e792`. Git dapat menampilkan lima pemindahan sebagai rename setelah staging;
 tidak ada penghapusan data bisnis. Path relatif terhadap root `M0`:
 
 ```text
@@ -363,3 +366,60 @@ tidak ada penghapusan data bisnis. Path relatif terhadap root `M0`:
 ?? tests/Support/TenantContextProbeJob.php
 ?? tests/Unit/M1ArchitectureTest.php
 ```
+
+## 9. Approval akhir PR6/M1 — 25 November 2026
+
+### 9.1 Keputusan pemilik dan cakupan
+
+Pengguna menyatakan: **"saya approval akhir PR6/M1, tolong kamu perbarui semua"**. Persetujuan manusia ini
+dicatat pada 2026-11-25 (Asia/Jakarta): **PR6 Approved; M1 Closed by owner** untuk pengembangan lokal dengan
+data sintetis, pada branch `Milestone-1`, commit `015e792f350536db14f4be049624e6d0e82e95b2`.
+Git working tree bersih sebelum pembaruan approval; remediasi tidak lagi berupa file baru yang belum di-commit.
+
+Ini keputusan penutupan milestone oleh pemilik, **bukan klaim semua evidence acceptance telah lengkap**.
+Approval tidak membuktikan demonstrasi browser/HTTPS, menghapus insiden PR5, menurunkan expected matrix,
+atau memberi waiver pada baseline. Tidak ada approval deployment produksi/data siswa nyata, M2, tag/release,
+commit/push/merge otomatis, atau perubahan arsitektur/ERD. Hasil penerimaan teknis yang belum dibuktikan tetap terbuka.
+
+### 9.2 CI terverifikasi dan pengujian tugas approval
+
+[M0 checks run 45356905502](https://github.com/Alfdhiw/LMS_SaaS/actions/runs/45356905502) mempunyai `head_sha`
+yang sama dengan commit yang disetujui dan conclusion **success**. Workflow selesai 24 November 2026
+pukul **15:34:43 WIB**; metadata run/job dibaca dari API GitHub publik pada 25 November 2026.
+
+| Pemeriksaan aktual pada tugas approval | Hasil | Batas |
+|---|---|---|
+| `git status --short`, `git rev-parse HEAD`, `git log -1` | Working tree awal bersih; commit `015e792` tersedia | Tidak membuat commit atau tag |
+| API GitHub Actions run/job untuk SHA yang disetujui | `smoke` dan `private-database-helper`: success; Pint/All tests/helper privat/lab SCRAM success | Hanya metadata, tanpa token/log/download artifact atau menjalankan ulang workflow |
+| Validasi read-only PowerShell: status/tanggal, referensi commit/CI, link/anchor, aturan ignore, checklist; `git diff --check` | **Lulus: 15 dokumen, 13 link lokal, 1 heading anchor; 7 file Git + 8 file lokal di-ignore** | Browser/insiden tetap unchecked, approval/CI checked; tidak ada perubahan staged atau HEAD. Bukan suite aplikasi |
+
+Hasil lokal **100 test/791 assertion**, runtime **2 test/51 assertion**, Pint **134 file**, JavaScript **3 test**,
+dan HTTP smoke **6 pemeriksaan** tetap evidence **24 November** di §8. Suite aplikasi, browser/HTTPS, Docker,
+migration/seed/restore dan probe database tidak dijalankan ulang pada tugas dokumentasi approval 25 November.
+CI `015e792` tidak membuktikan perubahan dokumentasi approval yang belum di-commit/push ini.
+
+### 9.3 Dampak perubahan dan file
+
+- Dilacak Git: `README.md`, `CHANGELOG.md`, `docs/DOCUMENT_INDEX.md`, dan empat runbook
+  `M1_ARCHITECTURE_GATE.md`, `M1_ACCEPTANCE_CHECKLIST.md`, `M1_TEST_MATRIX.md`, `M1_FINAL_REVIEW.md`.
+- Sinkronisasi lokal yang tetap di-ignore: `AGENTS.md`, `docs/runbooks/M1_MASTER_PLAN.md`, serta enam baseline aktif
+  pada indeks (PRD Master, ADR-001, ADR-002, ERD v1.1, PRD Auth/RBAC dan PRD SaaS Central). Label status/referensi ERD
+  diselaraskan dengan approval baseline yang sudah ada; baris metadata ADR-001 yang rusak diperbaiki. Tidak ada
+  approval baseline baru, perubahan requirement/arsitektur/schema atau persetujuan usulan delta yang belum diputuskan.
+  Tidak membuka seluruh docs untuk Git atau mengubah `.gitignore`; approval kanonis tetap dilacak pada gate/indeks/laporan.
+- Scope hanya status dan bukti dokumentasi. Kode, route, service, model, API, test, dependency, schema/migration,
+  data, Docker, HBA/role/grant, credential, tenant isolation dan permission runtime tidak berubah.
+- Riwayat review/approval sebelumnya, kehilangan data/rebuild PR5, batas backup/restore, dan gate produksi
+  dipertahankan. Paket overlay `M1/` tetap template historis, bukan aplikasi kedua atau status instalasi aktif.
+
+### 9.4 Follow-up yang tidak diimplementasikan oleh approval ini
+
+1. **High — browser empat host/HTTPS:** evidence cookie host-only, MFA/recovery dua sesi dan perubahan password
+   belum tersedia. Area: local TLS/browser/runbook pilot. Risiko: perilaku browser nyata belum terbukti walau suite hijau.
+2. **Medium — konsistensi password:** perlu persetujuan terpisah untuk memakai `PasswordPolicy` pada activation,
+   invitation dan recovery. Risiko: validasi panjang/byte dan pesan error berbeda antar-alur. Tidak mengganti algoritma
+   password atau mengubah credential secara otomatis.
+3. **Medium — commit dokumentasi approval:** review tujuh file Git di atas lalu commit oleh pengguna; belum ada
+   push/merge/tag oleh Codex. Risiko: clone lain masih menampilkan status approval lama jika perubahan hanya lokal.
+
+Saran commit: `docs: record final PR6 approval and M1 closure`.

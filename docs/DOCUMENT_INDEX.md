@@ -4,6 +4,7 @@
 |---|---|
 | Tanggal disusun | 5 November 2026 |
 | Status indeks | Accepted — baseline arsitektur dan ERD disetujui 8 November 2026 |
+| Status milestone — 25 November 2026 | PR6 Approved; M1 Closed by owner untuk lokal/sintetis; evidence browser/HTTPS belum lengkap; bukan production approval |
 | Tujuan | Satu titik referensi bagi Codex untuk versi dokumen, status persetujuan, dan prioritas sumber |
 
 > `DOCUMENT_INDEX.md` mencatat hasil review dan **tidak menyetujui dokumen secara otomatis**. Status `Accepted` di bawah merujuk pada approval record di `docs/runbooks/M1_ARCHITECTURE_GATE.md`, bukan pada perubahan tanggal atau urutan file. Migration produksi tetap mengikuti acceptance gate dan runbook M1.
@@ -84,8 +85,8 @@ PR5 telah disetujui. Role/status membership, undangan akun baru, join existing d
 recovery mandiri melalui email terverifikasi, serta UI undangan offline tersedia untuk review. Pada 2026-11-19 pengguna
 menyetujui rancangan recovery siswa tanpa email dengan dua sesi privat dan verifikasi tatap muka: admin tidak menerima
 token siswa. Pengguna menyetujui PR5 dan mengizinkan PR6 pada 2026-11-21. Pengujian otomatis akhir PR5 lulus;
-verifikasi browser HTTPS masih terbuka. Implementasi PR6 tersedia untuk review dan belum disetujui; bukti test dan
-gate yang masih terbuka dicatat di `docs/runbooks/M1_ARCHITECTURE_GATE.md`.
+verifikasi browser HTTPS masih terbuka. PR6 kemudian disetujui pengguna pada 25 November 2026; catatan penutupan,
+bukti test dan gate tersisa ada di `docs/runbooks/M1_ARCHITECTURE_GATE.md` serta bagian M di bawah.
 
 ## J. Status hardening autentikasi PostgreSQL lokal
 
@@ -100,7 +101,7 @@ instalasi lokal tersebut, dan tidak mengubah status review PR6 atau menjadi appr
 hasil pengujian ulang, tautan CI, temuan requirement/arsitektur, serta syarat penutupan. Checklist penerimaan dan
 `M1_TEST_MATRIX.md` sekarang memisahkan bukti yang tersedia dari cakupan parsial atau belum diuji.
 
-Status: **changes requested; PR6 belum disetujui, M1 belum complete, M2 belum dimulai**. Permintaan melaksanakan
+Status saat review awal 24 November: **changes requested; PR6 belum disetujui, M1 belum complete, M2 belum dimulai**. Permintaan melaksanakan
 final review bukan approval otomatis atas hasilnya. Baseline PRD/ADR/ERD yang Accepted tidak berubah;
 penyelesaian gap harus mengikuti baseline tersebut atau keputusan perubahan eksplisit dari pemilik.
 
@@ -112,7 +113,28 @@ Implementasi mengikuti baseline Accepted yang sama, tanpa schema/migration/Docke
 
 Evidence terbaru ada pada §8 `docs/runbooks/M1_FINAL_REVIEW.md`; checklist/matrix dan README contract telah
 diselaraskan dengan alur yang tersedia. Bagian K dan review awal tetap merupakan snapshot historis, bukan status
-bahwa fitur tersebut masih hilang setelah remediasi. CI commit `b07ebdf` tidak berlaku bagi working tree baru.
+bahwa fitur tersebut masih hilang setelah remediasi. Remediasi kini di-commit sebagai `015e792`; hasil CI terbaru
+dicatat di bagian M. CI commit `b07ebdf` sendiri bukan bukti kode remediasi.
 
-Persetujuan implementasi ini **bukan approval hasil PR6 atau penutupan M1**. Demonstrasi browser empat host/HTTPS,
-CI commit remediasi, dan keputusan akhir pengguna tetap terbuka. Tidak ada izin M2, data nyata, push atau merge.
+Persetujuan implementasi pada 24 November **bukan approval hasil PR6 atau penutupan M1**; approval akhir diberikan
+terpisah pada 25 November di bawah. Demonstrasi browser empat host/HTTPS belum mempunyai evidence.
+
+## M. Approval akhir PR6/M1 — 25 November 2026
+
+Pengguna menyatakan: "saya approval akhir PR6/M1, tolong kamu perbarui semua". Record manusia ini menyetujui PR6 dan
+menutup milestone M1 (**Closed by owner**) untuk pengembangan lokal dengan fixture sintetis pada commit kode
+`015e792f350536db14f4be049624e6d0e82e95b2`, branch `Milestone-1`. Ini bukan persetujuan otomatis oleh Codex.
+
+[M0 checks run 45356905502](https://github.com/Alfdhiw/LMS_SaaS/actions/runs/45356905502) untuk commit tersebut
+berstatus success, termasuk job `smoke` dan `private-database-helper`; metadata dibaca 25 November 2026.
+Regresi lokal 100 test/791 assertion dan runtime 2 test/51 assertion berasal dari pengujian 24 November, bukan
+pengulangan baru saat pencatatan approval. Evidence terperinci: §9 [M1_FINAL_REVIEW.md](runbooks/M1_FINAL_REVIEW.md).
+
+Approval milestone dan kelengkapan evidence teknis dibedakan: browser empat host/HTTPS tetap belum dibuktikan;
+insiden kehilangan/rebuild data PR5 tetap tercatat, bukan dianggap tidak pernah terjadi. Baseline acceptance,
+PRD/ADR/ERD dan gate produksi tidak diberi waiver atau diubah. Tidak ada izin data siswa nyata, deployment produksi,
+M2, tag/release, commit/push/merge otomatis. Pembaruan approval ini belum mempunyai commit/CI tersendiri.
+
+Label status pada enam baseline aktif dan referensi header ERD lama diselaraskan dengan status Accepted yang sudah
+tercatat; tidak mengubah keputusan/desain. File baseline, AGENTS dan master plan tetap di-ignore untuk Git sesuai
+aturan yang ada. Approval/status kanonis di gate/indeks/laporan tetap dilacak Git; paket overlay historis tidak diubah.

@@ -1,8 +1,11 @@
 # M1 ACCEPTANCE CHECKLIST
 
-**Status 24 November 2026:** remediasi F01–F03 diimplementasikan dengan izin pengguna; PR6/M1 belum ditutup.
+**Status 25 November 2026:** PR6 **Approved**, M1 **Closed by owner** atas approval akhir pengguna untuk lokal/sintetis.
+**Evidence teknis belum seluruhnya lengkap:** browser empat host/HTTPS tetap belum dibuktikan. Approval tidak
+mengubah poin yang belum teruji menjadi lulus, tidak menghapus insiden PR5, dan bukan izin produksi atau M2.
 Baseline commit review: `b07ebdf182080f184065caf5b60a2b81c9efafaa` pada branch `Milestone-1`.
-Checklist ini mencakup working tree remediasi yang belum di-commit/push; CI baseline bukan CI kode baru.
+Commit remediasi yang disetujui: `015e792f350536db14f4be049624e6d0e82e95b2`; CI commit tersebut terverifikasi sukses.
+Dokumentasi approval 25 November belum di-commit/push atau mempunyai CI sendiri.
 Evidence lengkap dan batas pengujian: [M1_FINAL_REVIEW.md](M1_FINAL_REVIEW.md).
 `[x]` berarti bukti untuk poin yang disebut tersedia; `[ ]` berarti belum lengkap, termasuk poin parsial.
 Kelulusan suite tidak otomatis mencentang semua requirement. Tidak ada approval manusia yang dibuat oleh checklist ini.
@@ -17,7 +20,9 @@ Kelulusan suite tidak otomatis mencentang semua requirement. Tidak ada approval 
   tanpa penghapusan tidak dapat dicentang: insiden PR5 dan rebuild berizin 19 November tetap tercatat di gate.
 - [x] Write M1 dipanggil melalui contract/action pemilik, Support tidak mengimpor Modules; `M1ArchitectureTest`
   menjaga dependency/write dengan parser AST. Tidak merupakan analisis semantik menyeluruh seluruh bentuk PHP.
-- [ ] PR6 dan penutupan M1 disetujui pengguna setelah seluruh temuan applicable ditangani.
+- [x] Approval akhir PR6 dan penutupan M1 diberikan pengguna pada 25 November 2026 melalui percakapan.
+- [ ] Seluruh evidence penerimaan teknis lengkap: demonstrasi browser empat host/HTTPS masih belum dibuktikan.
+  Pemisahan record approval/evidence ini tidak menurunkan expected result atau memberi waiver pada acceptance baseline.
 
 ## Schema & role catalogue
 
@@ -76,8 +81,8 @@ Kelulusan suite tidak otomatis mencentang semua requirement. Tidak ada approval 
   replay sesi dan queue sync. Batas per skenario tetap tercatat; bukan bukti browser atau policy akademik M2.
 - [x] Semua tests M0 tetap lulus (3 test dalam full suite).
 - [x] Pint lokal 134 file lulus; Composer valid dan JavaScript recovery 3 test lulus.
-- [ ] CI commit remediasi lulus. CI baseline `b07ebdf` sukses pada kedua job; perubahan kode/dokumentasi baru
-  belum di-commit/push atau diuji CI tersendiri.
+- [x] CI commit remediasi `015e792` lulus: [run 45356905502](https://github.com/Alfdhiw/LMS_SaaS/actions/runs/45356905502),
+  job `smoke` dan `private-database-helper` sukses. Metadata diverifikasi 25 November; bukan CI perubahan approval ini.
 - [ ] Uji manual 3 sekolah sintetis dalam 4 host lokal selesai.
 - [x] README, CHANGELOG, AGENTS lokal, indeks, gate/checklist/matrix dan README contract diselaraskan.
   AGENTS tetap di-ignore sesuai aturan Git; sinkronisasi lokalnya bukan bukti dokumen tersebut dilacak Git.
@@ -85,18 +90,22 @@ Kelulusan suite tidak otomatis mencentang semua requirement. Tidak ada approval 
 
 ## Bukti ringkas dan keputusan
 
-Hasil terbaru remediasi: lihat §8 [M1_FINAL_REVIEW.md](M1_FINAL_REVIEW.md). Ringkasan berikut adalah snapshot
-sebelum perbaikan, dipertahankan sebagai riwayat dan tidak dihitung sebagai CI working tree baru:
+Hasil remediasi 24 November: §8 [M1_FINAL_REVIEW.md](M1_FINAL_REVIEW.md); approval/CI terbaru 25 November: §9.
 
 **Remediasi final:** full suite **100 test/791 assertion**, 311,85 detik; runtime terisolasi **2 test/51 assertion**;
 Pint **134 file**; JavaScript **3 test**; HTTP smoke **6 pemeriksaan**; Composer valid. Semua lulus lokal.
-Angka 75/513 dan runtime 2/43 di bawah hanya snapshot review awal.
+Angka 75/513 dan runtime 2/43 di bawah hanya snapshot review awal. Tidak ada pengulangan suite aplikasi pada tugas
+dokumentasi approval 25 November. Snapshot historis berikut tidak menggantikan evidence commit `015e792`:
 
 - Full suite: `powershell -NoProfile -File scripts/m1-operator.ps1 test` — **75 test/513 assertion**, 324,09 detik.
 - Runtime: `powershell -NoProfile -File tests/Support/m1-runtime-integration.ps1` — **2 test/43 assertion** pada tmpfs.
 - JavaScript recovery: 3 test; Composer valid; Pint: 110 file; HTTP host smoke: 6 pemeriksaan.
 - [CI commit b07ebdf](https://github.com/Alfdhiw/LMS_SaaS/actions/runs/45137773386) — kedua job sukses.
 - Browser tidak dapat terhubung (`missing field sandboxPolicy`); tidak ada bukti baru browser/HTTPS.
-- Approval PR0–PR5/baseline yang sudah ada tetap berlaku. Tidak ada approval otomatis PR6, pengecualian ADR, atau M2.
+- Approval PR0–PR5/baseline tetap berlaku; approval akhir PR6/M1 kemudian diberikan pengguna 25 November,
+  bukan dibuat otomatis oleh Codex. Tidak ada pengecualian ADR atau izin M2.
 
 **M1 COMPLETE hanya jika semua poin applicable di atas mempunyai evidence commit / screenshot sanitized / test log.**
+
+Status **Closed by owner** mencatat keputusan pemilik pada 25 November, bukan klaim kriteria kelengkapan evidence
+di atas sudah terpenuhi. Browser/HTTPS tetap follow-up terbuka, dan catatan historis kehilangan data tidak diubah.

@@ -8,6 +8,16 @@
 
 Baseline arsitektur dan ERD di atas telah disetujui oleh pengguna pada 8 November 2026. Catatan ini menyelaraskan repository dengan approval tersebut; ini bukan persetujuan otomatis oleh Codex. Risiko produksi yang masih terbuka tetap harus ditangani melalui milestone dan gate terkait.
 
+## Ringkasan milestone — 25 November 2026
+
+**PR6: Approved. M1: Closed by owner**, berdasarkan approval akhir pengguna untuk pengembangan lokal/sintetis.
+Commit yang disetujui: `015e792f350536db14f4be049624e6d0e82e95b2` (`Milestone-1`). CI commit ini terverifikasi
+sukses; browser empat host/HTTPS belum mempunyai evidence. Kelengkapan acceptance teknis tetap dicatat terpisah
+dari keputusan penutupan pemilik; tidak ada waiver requirement atau izin produksi/data siswa nyata/M2.
+
+Record lengkap ada pada bagian **Approval akhir PR6/M1 — 25 November 2026** di bawah. Bagian review terdahulu
+adalah riwayat bertanggal; status "menunggu/belum disetujui" di sana tidak membatalkan approval akhir ini.
+
 ## Keputusan yang harus direview manusia
 
 | Area | Accepted baseline | Hal yang diverifikasi |
@@ -154,7 +164,7 @@ Scope: membership, invitation, account linking, recovery, audit dan hardening PR
 Next gate: review dan approval PR6 sebelum melanjutkan ke M2.
 ```
 
-## PR6 — bukti implementasi untuk review
+## Riwayat PR6 — bukti implementasi untuk review sebelum approval akhir
 
 - Dashboard central menampilkan agregat tenant, onboarding dan kegagalan provisioning yang disaring; directory
   mendukung pencarian, filter, pagination, dan status undangan. Pembaruan nama/timezone memeriksa permission,
@@ -513,7 +523,7 @@ Audit database hardening design: [x] Approved — reviewer: user (chat approval)
 Implementation: local rollout verified — not production approval; PR6 remains under review.
 ```
 
-## Final review PR6 / penutupan M1 — 24 November 2026
+## Riwayat final review PR6 / penutupan M1 — 24 November 2026
 
 Pengguna meminta final review dan penutupan M1. Review dilakukan terhadap commit
 `b07ebdf182080f184065caf5b60a2b81c9efafaa`; ini bukan persetujuan otomatis PR6 atau perubahan baseline arsitektur.
@@ -585,5 +595,34 @@ Remediation scope 1–3: [x] Approved — reviewer: user (chat), date: 2026-11-2
 PR6 result / M1 closure: [ ] Approved — evidence browser/HTTPS + CI commit baru + keputusan akhir belum lengkap
 M2 / production / real-student pilot: NOT AUTHORIZED
 ```
+
+## Approval akhir PR6/M1 — 25 November 2026
+
+Sumber keputusan manusia: pengguna menyatakan **"saya approval akhir PR6/M1, tolong kamu perbarui semua"**.
+Reviewer/pemberi persetujuan: pengguna/pemilik proyek melalui percakapan, tanggal 2026-11-25 (Asia/Jakarta).
+Ini berbeda dari persetujuan remediasi 1–3 pada 24 November dan bukan approval yang diberikan Codex sendiri.
+
+```text
+PR6 result: [x] Approved — reviewer: user (explicit final chat approval), date: 2026-11-25
+M1 closure: [x] Closed by owner — local development / synthetic data
+Approved code: Milestone-1 / 015e792f350536db14f4be049624e6d0e82e95b2
+Acceptance evidence: [ ] Complete — browser four-host / HTTPS demonstration remains unverified
+Production / real-student pilot / M2 / automatic commit-push-merge-release: NOT AUTHORIZED
+```
+
+Evidence yang tersedia saat pencatatan:
+
+- Remediasi F01–F03 sudah di-commit sebagai `015e792`. Git working tree bersih sebelum pembaruan dokumentasi ini.
+- [M0 checks run 45356905502](https://github.com/Alfdhiw/LMS_SaaS/actions/runs/45356905502) untuk SHA di atas:
+  workflow success, job `smoke` dan `private-database-helper` success. Langkah Pint, All tests, helper privat dan
+  lab SCRAM sukses. Workflow selesai 24 November 2026 pukul 15:34:43 WIB; metadata dibaca 25 November tanpa token/log.
+- Hasil lokal 24 November tetap 100 test/791 assertion, runtime 2 test/51 assertion, Pint 134 file, JavaScript
+  3 test, dan HTTP smoke 6 pemeriksaan lulus. Bukan pengujian yang diulang pada tugas dokumentasi 25 November.
+
+Approval milestone tidak membuktikan F04 browser/HTTPS telah diuji dan tidak menghapus syarat acceptance maupun
+insiden PR5. Follow-up browser/HTTPS, konsistensi validasi password lintas activation/recovery, dan gate produksi
+tetap tercatat pada §9 [M1_FINAL_REVIEW.md](M1_FINAL_REVIEW.md). Tidak ada waiver atau keputusan arsitektur baru.
+Dokumentasi approval ini belum di-commit/push; CI kode tidak otomatis membuktikan perubahan dokumentasi berikutnya.
+Tidak ada kode, schema/migration, data, role/HBA, Docker, credential atau permission runtime yang diubah.
 
 Setelah perubahan keputusan, update status di dokumen asli dan `docs/DOCUMENT_INDEX.md`; simpan riwayat, jangan hapus versi lama. Draft migration disesuaikan jika review mengubah schema.
