@@ -18,10 +18,10 @@ case "${1:-}" in
     migrate) exec php artisan migrate --force ;;
     seed) exec php artisan db:seed --force ;;
     test)
-        if [ "$#" -eq 1 ]; then exec php artisan test; fi
+        if [ "$#" -eq 1 ]; then exec sh scripts/m1-test-runtime.sh; fi
         [ "$#" -eq 3 ] && [ "$2" = --filter ] || { echo 'Only an optional test filter is allowed.' >&2; exit 1; }
-        exec php artisan test --filter "$3"
+        exec sh scripts/m1-test-runtime.sh --filter "$3"
         ;;
-    test-m0) exec php artisan test --filter=M0 ;;
+    test-m0) exec sh scripts/m1-test-runtime.sh --filter M0 ;;
     *) echo 'Allowed operations: migrate, seed, test, test-m0.' >&2; exit 1 ;;
 esac

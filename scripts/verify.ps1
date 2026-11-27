@@ -7,7 +7,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Laravel tidak dapat diakses.' }
 if (Select-String -Quiet -Path '.env' -Pattern '^DB_USERNAME=lms_runtime\s*$') {
     & "$PSScriptRoot/m1-operator.ps1" test-m0
 } else {
-    docker compose exec -T app php artisan test --filter=M0
+    docker compose exec -T app sh scripts/m1-test-runtime.sh --filter M0
     if ($LASTEXITCODE -ne 0) { throw 'Smoke test gagal.' }
 }
 docker compose exec -T app ./vendor/bin/pint --test

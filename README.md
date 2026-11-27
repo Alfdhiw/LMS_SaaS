@@ -78,7 +78,32 @@ docker compose down
 **Peringatan:** `docker compose down -v` menghapus seluruh volume database dan Redis lokal. Jangan gunakan jika ada data yang masih diperlukan.
 
 Perintah operator di atas membutuhkan override lokal dan secret owner yang dijelaskan pada bagian hardening audit.
-Pada baseline M0/CI yang belum menggunakan pemisahan role, tes tetap memakai `docker compose exec -T app php artisan test`.
+Pada baseline M0/CI yang belum menggunakan pemisahan role, gunakan
+`docker compose exec -T app sh scripts/m1-test-runtime.sh`.
+
+### Isolasi file test dan izin runtime lokal
+
+Operator `test`/`test-m0`, setup/verify, dan langkah test CI memakai `scripts/m1-test-runtime.sh` sebelum Laravel boot.
+Setiap run membuat storage (log, cache Blade, session/file cache, file sintetis) dan bootstrap cache privat yang unik
+di `/tmp` container; database tetap dikunci ke `lms_saas_test`. Proses concurrency mewarisi path tersebut.
+Direktori sementara dibersihkan saat test selesai maupun gagal, dan exit code test dipertahankan.
+`umask 077` operator tetap berlaku; credential owner tidak dipindahkan ke runtime web atau dicetak.
+
+Jangan menjalankan `php artisan test`/PHPUnit langsung pada bind mount lokal untuk workflow sehari-hari:
+file output root dapat membuat PHP-FPM `www-data` gagal membaca cache atau menulis log. Memisahkan database test
+saja tidak memisahkan file runtime. Gunakan operator di atas pada instalasi dengan role terpisah; launcher M0/CI
+tidak memasok credential owner dan bukan pengganti operator.
+
+Jika menjumpai `Permission denied` pada log atau Blade, periksa ownership file spesifik sebagai `www-data`.
+Pemulihan 26 November 2026 membenahi ownership log dan cache Blade existing tanpa menghapus isi log,
+tanpa `chmod 777`, tanpa menyentuh `storage/app/private`/backup, dan tanpa rebuild database atau perubahan Docker.
+Jangan menerapkan `chown/chmod -R storage` untuk memperbaikinya karena file privat memiliki aturan akses berbeda.
+
+Verifikasi 26 November: operator full suite lulus **104 test/816 assertion** (244,67 detik), probe launcher final
+lulus **4 test/25 assertion** termasuk boot Laravel dan kompilasi layout central ke path privat. Pint lulus 135 file,
+Composer valid, enam host smoke lulus, dan layout central dapat dirender sebagai `www-data` dengan sesi array.
+File log dapat dibuka untuk append tanpa menambah isi; 0 cache Blade milik root tersisa setelah test.
+Ini bukan pengujian login browser memakai akun pilot; setup/migration/seed aplikasi dan workflow GitHub tidak dijalankan.
 
 Frontend Vite belum diperlukan pada M0; setelah modul UI disetujui, jalankan `docker compose --profile assets up -d vite`. Sesuaikan aplikasi bila hot reload di Windows perlu konfigurasi HMR.
 

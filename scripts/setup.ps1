@@ -53,7 +53,7 @@ if (Select-String -Quiet -Path '.env' -Pattern '^DB_USERNAME=lms_runtime\s*$') {
     docker compose exec -T app php artisan db:seed --force
     if ($LASTEXITCODE -ne 0) { throw 'Seed katalog role dan permission gagal.' }
 
-    docker compose exec -T app php artisan test --filter=M0
+    docker compose exec -T app sh scripts/m1-test-runtime.sh --filter M0
     if ($LASTEXITCODE -ne 0) { throw 'M0 smoke test gagal.' }
 }
 

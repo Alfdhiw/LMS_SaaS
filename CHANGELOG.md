@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — M1 runtime permission fix (26 November 2026)
+
+- Pulihkan akses `www-data` pada log Laravel dan cache Blade existing yang dibuat root; isi log dipertahankan.
+- Isolasi storage dan bootstrap cache test dalam direktori `/tmp` privat per run sebelum Artisan boot, termasuk
+  subprocess concurrency; cleanup saat sukses/gagal mempertahankan exit code dan `umask 077`.
+- Operator lokal, setup/verify dan test CI memakai launcher yang sama; regression probes mencakup isolasi path,
+  permission privat, exit code, cleanup terbatas, filter dan penolakan opsi Artisan lain.
+- Tidak mengubah schema/migration, kredensial, permission tenant, konfigurasi Docker M0 atau status approval M1.
+- Verifikasi lokal: full suite 104 test/816 assertion; probe final 4 test/25 assertion; Pint 135 file; Composer valid;
+  6 host smoke dan render layout central sebagai `www-data` lulus. Login browser akun pilot dan CI belum diulang.
+
 ## Unreleased — M1 PR6 (approved 25 November 2026)
 
 - Bukti browser publik HTTP ditambahkan: 11 pemeriksaan Chrome headless lulus, dengan 11 screenshot dan manifest

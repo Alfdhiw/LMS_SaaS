@@ -15,6 +15,6 @@ if grep -qE '^DB_USERNAME=lms_runtime[[:space:]]*$' .env; then
   sh scripts/m1-operator.sh test-m0
 else
   docker compose exec -T app php artisan migrate --force
-  docker compose exec -T app php artisan test --filter=M0
+  docker compose exec -T app sh scripts/m1-test-runtime.sh --filter M0
 fi
 printf '\n[M0] Open http://localhost:8080 and Mailpit http://localhost:8025\n'

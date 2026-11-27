@@ -32,7 +32,7 @@ jobs:
       - name: PHP coding standard
         run: docker compose exec -T app ./vendor/bin/pint --test
       - name: All tests
-        run: docker compose exec -T app php artisan test
+        run: docker compose exec -T app sh scripts/m1-test-runtime.sh
       - name: Service status
         if: always()
         run: docker compose ps
