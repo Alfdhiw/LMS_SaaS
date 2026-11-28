@@ -9,6 +9,8 @@
 | Perencanaan M2 — 27 November 2026 | Branch Milestone-2 / 4b29461; dokumen awal PR0 disusun sebagai Proposed |
 | Approval M2 — 28 November 2026 | PR0 Approved oleh pengguna; PRD Academic/amendment/plan v0.1 Accepted; penyusunan PR1 diizinkan; DDL aplikasi belum diizinkan |
 | Persiapan PR1 — 28 November 2026 | Selesai untuk review, baseline 08195f8; contract/DTO, architecture guard, sinkronisasi ERD/diagram dan draf M2-A test-only; regresi ulang 144 test/1247 assertion lulus; hasil PR1/DDL/PR2 belum disetujui |
+| Approval PR1 — 28 November 2026 | Pengguna menyetujui hasil PR1, izin migrasi aplikasi lokal setelah preflight, dan pekerjaan adapter/policy PR2 serta perluasan guard AST; lihat gate untuk bukti pelaksanaan aktual |
+| Migrasi M2-A — 28 November 2026 | Lima tabel additive telah diterapkan pada `lms_saas` lokal setelah backup/restore test; pekerjaan PR2 parsial, belum direview atau disetujui |
 | Tujuan | Satu titik referensi bagi Codex untuk versi dokumen, status persetujuan, dan prioritas sumber |
 
 > `DOCUMENT_INDEX.md` mencatat hasil review dan **tidak menyetujui dokumen secara otomatis**. Status `Accepted` merujuk pada approval record manusia: baseline M1 pada `docs/runbooks/M1_ARCHITECTURE_GATE.md`, dan dokumen M2 pada `docs/runbooks/M2_ARCHITECTURE_GATE.md`. Perubahan tanggal atau urutan file bukan approval; gate produksi M1 dan izin DDL per batch tetap berlaku.
@@ -61,7 +63,7 @@ Jika satu dokumen berubah, revisi indeks ini dan tautan ke versi terbaru pada `A
 
 - **M0 scaffold dan tooling:** dapat dilakukan sambil proposal direview, jika tidak mengunci schema/keputusan terbuka.
 - **M1 migration final dan auth/provisioning:** baseline ADR-001, ADR-002, dan ERD v1.1 telah disetujui; lanjutkan sesuai urutan PR dan acceptance checklist M1.
-- **M2:** PR0 Approved; persiapan PR1 diminta pengguna pada 28 November 2026. Hasil PR1, PR2–PR6 dan DDL aplikasi menunggu review/izin tersendiri sesuai gate M2.
+- **M2:** PR0 dan PR1 Approved; DDL M2-A lokal sudah diizinkan dan diterapkan setelah preflight. Adapter/policy PR2 dikerjakan sebagian; review/approval PR2 dan izin PR3–PR6 tetap menunggu sesuai gate M2.
 - **Pilot sekolah nyata:** hanya sesudah security, data protection, backup restore, dan uji beban terpenuhi.
 
 ## F. Perubahan yang menjadi prioritas saat review

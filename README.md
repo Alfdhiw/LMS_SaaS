@@ -1,5 +1,11 @@
 # LMS SaaS Multi-Sekolah — M1 (lokal/sintetis)
 
+**Status terkini M2, 28 November 2026:** PR1 disetujui; lima tabel M2-A diterapkan
+di database lokal setelah backup dan restore test. Adapter/policy dan workflow internal
+PR2 disiapkan, tetapi UI/CRUD PR2 belum lengkap dan PR2 belum disetujui. Rincian dan
+bukti: [gate M2](docs/runbooks/M2_ARCHITECTURE_GATE.md). Status terdahulu di bawah
+adalah snapshot historis, bukan status terkini. Belum ada izin PR3 atau data nyata.
+
 **Status 25 November 2026:** PR6 **Approved** dan M1 **Closed by owner** berdasarkan approval akhir pengguna, untuk pengembangan lokal dengan data sintetis. Commit remediasi: `015e792`; CI commit tersebut sukses. Bukti browser HTTP/tamu kini tersedia (11 pemeriksaan, §10 laporan), tetapi demonstrasi login/MFA/recovery melalui HTTPS belum lengkap; aplikasi belum siap produksi atau data siswa nyata. M2 belum dimulai/diizinkan. Lihat [approval dan catatan penutupan](docs/runbooks/M1_FINAL_REVIEW.md#9-approval-akhir-pr6m1--25-november-2026) serta [acceptance checklist](docs/runbooks/M1_ACCEPTANCE_CHECKLIST.md).
 
 **Pembaruan 28 November 2026:** PR0 M2 disetujui pengguna pada branch `Milestone-2`, baseline `4b29461`

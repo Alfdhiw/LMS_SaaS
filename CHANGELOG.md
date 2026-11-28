@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — M2 PR1 approval dan PR2 parsial (28 November 2026)
+
+- Catat approval PR1, izin migration M2-A lokal dan permintaan adapter/policy PR2.
+- Backup privat terenkripsi dan restore sintetis diverifikasi; lima tabel diterapkan
+  additive ke database lokal, grants runtime diterapkan ulang, audit tetap append-only.
+- Implementasikan reader eligibility Identity, adapter profil Tenancy, policy profil
+  dan workflow profil internal dengan pemeriksaan sesi/permission serta audit atomik.
+- Perluas guard grouped import, mutasi model statis dan SQL dinamis; sesuaikan tes M1
+  agar memeriksa constraint M1 tanpa mengasumsikan jumlah seluruh schema tidak berubah.
+- UI/CRUD PR2 dan acceptance HTTP belum lengkap; tidak ada approval PR2, PR3, data
+  nyata, push/merge atau perubahan konfigurasi Docker.
+
 ## Unreleased — M2 PR1 preparation (28 November 2026)
 
 - Atas permintaan pengguna, siapkan port/DTO eligibility Identity dan school profile Tenancy; validasi,

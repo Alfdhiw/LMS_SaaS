@@ -1,5 +1,10 @@
 # Identity — M1 contracts
 
+> M2 update: `MembershipEligibilityReader` is now bound to a same-tenant query.
+> `SchoolProfileWorkflow` is the internal, session/permission-checked entry point
+> for audited school profile changes. The PR1-only description below is historical;
+> no HTTP route or user-facing Academic directory has been added.
+
 Identity owns users, membership/RBAC, invitation/recovery and authentication credentials (including central MFA).
 `BootstrapAdminAccounts` creates/rotates bootstrap credentials inside the caller's transaction with the pending
 tenant locked; it never provisions a tenant. `TenantMemberships` supplies tenant-scoped readiness/offboarding and

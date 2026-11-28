@@ -1,5 +1,10 @@
 # Tenancy — M1 contracts
 
+> M2 update: `SchoolProfiles` is bound to `ManageSchoolProfiles`. Its update is an
+> internal port requiring an already authorized, audited transaction; use the owning
+> `SchoolProfileWorkflow`, not the port directly from a route. PR1-only statements
+> below are historical. No HTTP feature has been added.
+
 Tenancy owns tenants, domains and settings. `TenantRegistry` is implemented by `Actions/ManageTenantRegistry`:
 pending creation, domain/settings, fresh context locks, legal lifecycle transitions and onboarding updates.
 All mutation methods require an outer workflow transaction. Host/domain/status checks are server-side.

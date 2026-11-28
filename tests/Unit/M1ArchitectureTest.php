@@ -4,9 +4,13 @@ namespace Tests\Unit;
 
 use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Expr\PropertyFetch;
 use PhpParser\Node\Expr\StaticCall;
+use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Name;
 use PhpParser\Node\Scalar\String_;
+use PhpParser\Node\Stmt\Class_;
+use PhpParser\Node\Stmt\GroupUse;
 use PhpParser\NodeFinder;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\NameResolver;
@@ -98,6 +102,21 @@ PHP;
         $this->assertSame([], $this->dependencyViolations('<?php use App\Modules\Academic\Contracts\OnboardingSummary;', 'Platform'));
     }
 
+    public function test_guard_detects_grouped_imports_static_model_writes_and_dynamic_sql(): void
+    {
+        $this->assertNotEmpty($this->dependencyViolations('<?php use App\Modules\Identity\{Contracts\MembershipEligibilityReader, Services\PermissionChecker as Checker};', 'Academic'));
+        $this->assertSame([], $this->dependencyViolations('<?php use App\Modules\Identity\{Contracts\MembershipEligibilityReader, Data\MembershipEligibility};', 'Academic'));
+        $this->assertNotEmpty($this->writeViolations('<?php use App\Models\User as Account; Account::create([]);', 'Academic'));
+        $this->assertSame([], $this->writeViolations('<?php use App\Models\User as Account; Account::create([]);', 'Identity'));
+        $this->assertNotEmpty($this->writeViolations('<?php use App\Modules\Academic\Models\StudentProfile; StudentProfile::updateOrCreate([], []);', 'Identity'));
+        $this->assertNotEmpty($this->writeViolations('<?php use Illuminate\Support\Facades\DB; DB::select($sql);', 'Academic'));
+        $this->assertNotEmpty($this->writeViolations('<?php use Illuminate\Support\Facades\DB; DB::select("DELETE FROM users RETURNING id");', 'Academic'));
+        $this->assertNotEmpty($this->writeViolations('<?php use Illuminate\Support\Facades\DB; DB::connection()->statement($sql);', 'Academic'));
+        $allowed = '<?php use App\Modules\Tenancy\Contracts\SchoolProfiles; class Workflow { public function __construct(private SchoolProfiles $profiles) {} public function go($context, $changes) { $this->profiles->update($context, $changes); } }';
+        $this->assertSame([], $this->writeViolations($allowed, 'Identity'));
+        $this->assertNotEmpty($this->writeViolations(str_replace('SchoolProfiles $profiles', 'object $profiles', $allowed), 'Identity'));
+    }
+
     private function dependencyViolations(string $source, string $module): array
     {
         $forbidden = [
@@ -108,6 +127,12 @@ PHP;
             'Assessment' => ['Platform'],
         ];
         $violations = [];
+        $nodes = (new ParserFactory)->createForHostVersion()->parse($source);
+        foreach ((new NodeFinder)->findInstanceOf($nodes, GroupUse::class) as $group) {
+            foreach ($group->uses as $use) {
+                $source .= "\n".$group->prefix->toString().'\\'.$use->name->toString();
+            }
+        }
         preg_match_all('/App\\\\Modules\\\\([A-Za-z]+)\\\\([A-Za-z]+)/', $source, $references, PREG_SET_ORDER);
         foreach ($references as $reference) {
             [$fullName, $target, $layer] = $reference;
@@ -129,7 +154,38 @@ PHP;
         $nodes = $traverser->traverse($nodes);
         $finder = new NodeFinder;
         $violations = [];
+        $contractCalls = [];
+        if ($module === 'Identity') {
+            foreach ($finder->findInstanceOf($nodes, Class_::class) as $class) {
+                $properties = [];
+                foreach ($class->getMethod('__construct')?->params ?? [] as $parameter) {
+                    if ($parameter->flags !== 0 && $parameter->type instanceof Name
+                        && $parameter->type->toString() === 'App\\Modules\\Tenancy\\Contracts\\SchoolProfiles'
+                        && is_string($parameter->var->name)) {
+                        $properties[] = $parameter->var->name;
+                    }
+                }
+                foreach ($finder->findInstanceOf($class, MethodCall::class) as $candidate) {
+                    $receiver = $candidate->var;
+                    if ($candidate->name instanceof Node\Identifier && $candidate->name->toString() === 'update'
+                        && $receiver instanceof PropertyFetch && $receiver->var instanceof Variable
+                        && $receiver->var->name === 'this' && $receiver->name instanceof Node\Identifier
+                        && in_array($receiver->name->toString(), $properties, true)) {
+                        $contractCalls[spl_object_id($candidate)] = true;
+                    }
+                }
+            }
+        }
         foreach ($finder->findInstanceOf($nodes, MethodCall::class) as $call) {
+            if (isset($contractCalls[spl_object_id($call)])) {
+                continue;
+            }
+            if ($call->name instanceof Node\Identifier && in_array($call->name->toString(), ['statement', 'unprepared', 'select', 'selectOne', 'affectingStatement'], true)
+                && $call->var instanceof StaticCall && $call->var->class instanceof Name
+                && $call->var->class->toString() === 'Illuminate\\Support\\Facades\\DB'
+                && $call->var->name instanceof Node\Identifier && $call->var->name->toString() === 'connection') {
+                $violations[] = 'Raw connection SQL bypasses the table ownership guard at line '.$call->getStartLine();
+            }
             if (! $call->name instanceof Node\Identifier || ! in_array($call->name->toString(), [
                 'insert', 'insertGetId', 'insertOrIgnore', 'update', 'updateOrInsert', 'upsert', 'delete',
                 'increment', 'decrement', 'truncate', 'save', 'forceDelete',
@@ -157,6 +213,23 @@ PHP;
             if ($call->class instanceof Name && $call->class->toString() === 'Illuminate\\Support\\Facades\\DB'
                 && $call->name instanceof Node\Identifier && in_array($call->name->toString(), ['statement', 'unprepared', 'insert', 'update', 'delete'], true)) {
                 $violations[] = 'Raw mutation bypasses the table ownership guard at line '.$call->getStartLine();
+            }
+            if ($call->class instanceof Name && $call->class->toString() === 'Illuminate\\Support\\Facades\\DB'
+                && $call->name instanceof Node\Identifier && in_array($call->name->toString(), ['select', 'selectOne', 'selectFromWriteConnection'], true)) {
+                $sql = $call->args[0]->value ?? null;
+                if (! $sql instanceof String_ || preg_match('/\A\s*select\b/i', $sql->value) !== 1
+                    || preg_match('/\b(insert|update|delete|merge|alter|drop|create|truncate)\b/i', $sql->value) === 1
+                    || str_contains($sql->value, ';')) {
+                    $violations[] = 'Dynamic or mutating raw SQL bypasses the table ownership guard at line '.$call->getStartLine();
+                }
+            }
+            if ($call->class instanceof Name && $call->name instanceof Node\Identifier
+                && in_array($call->name->toString(), ['create', 'forceCreate', 'insert', 'insertOrIgnore', 'upsert', 'update', 'delete', 'updateOrCreate', 'firstOrCreate', 'destroy', 'truncate', 'increment', 'decrement'], true)
+                && str_starts_with($call->class->toString(), 'App\\')) {
+                $table = $call->class->toString() === 'App\\Models\\User' ? 'users' : null;
+                if ($table === null || (self::OWNERS[$table] ?? null) !== $module) {
+                    $violations[] = $module.' cannot directly write '.($table ?? 'an unclassified model').' at line '.$call->getStartLine();
+                }
             }
         }
 

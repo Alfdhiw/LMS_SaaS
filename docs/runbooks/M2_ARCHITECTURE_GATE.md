@@ -50,7 +50,7 @@ tahap terkait. Approval desain ini bukan izin DDL aplikasi.
 - [x] Keputusan D01–D06 dan PRD v0.1 disetujui tanpa revisi pada approval ini.
 - [x] Amendment ERD v0.1 dan rencana additive disetujui sebagai dasar perincian migration.
 - [x] Diizinkan menyusun PR1, contract/architecture tests dan migration plan; tanpa apply migration pada database aplikasi.
-- [ ] Izin DDL aplikasi PR1 diberikan terpisah setelah daftar migration dan preflight direview.
+- [x] Izin DDL aplikasi PR1 diberikan terpisah; pelaksanaan tetap bergantung pada preflight aman di bawah.
 
 Reviewer: pengguna/pemilik proyek melalui chat. Tanggal keputusan: 28 November 2026
 (Asia/Jakarta). Dokumen yang diterima: v0.1 yang disusun 27 November 2026 pada
@@ -146,9 +146,70 @@ Error sintaks test immutability pada run awal sudah diperbaiki sebelum subset lu
 Tidak ada blocker implementasi pada scope persiapan; approval hasil PR1, preflight
 DDL dan implementasi adapter/business policy PR2 tetap merupakan gate terbuka.
 
-- [ ] Hasil persiapan PR1, contract/DTO dan migration plan disetujui pengguna.
-- [ ] Finalisasi/apply batch M2-A pada database aplikasi diizinkan setelah preflight.
-- [ ] Diizinkan lanjut PR2 setelah review PR1.
+- [x] Hasil persiapan PR1, contract/DTO dan migration plan disetujui pengguna.
+- [x] Finalisasi/apply batch M2-A pada database aplikasi diizinkan setelah preflight.
+- [x] Diizinkan lanjut PR2 setelah review PR1.
+
+## Approval PR1 dan izin PR2 pada 28 November 2026
+
+Pengguna/pemilik proyek menyatakan melalui chat: "oke saya setuju untuk PR1 dan
+jalankan migration pada database sekaligus lakukan implementasikan adapter/policy PR2
+dan perluas guard AST". Persetujuan ini mencakup hasil PR1, izin DDL M2-A pada
+database aplikasi lokal setelah preflight, dan pekerjaan PR2 yang diminta. Approval
+PR2, PR3–PR6, data nyata, deployment, push dan merge tidak diberikan. Hasil backup,
+preflight, migration dan PR2 harus dilaporkan sebagai bukti aktual secara terpisah;
+approval ini bukan pernyataan bahwa semua langkah tersebut telah berhasil.
+
+## Penerapan M2-A lokal dan pekerjaan PR2 pada 28 November 2026
+
+Sebelum migrasi: target `lms_saas`/owner `lms_user`, lima migration M1 Ran, satu
+migration M2-A Pending, tanpa konflik nama tabel; 3 tenant, 4 user, 3 membership.
+Compose lokal sehat dan guard runtime/audit lulus. Backup custom-format dibuat dengan
+mode 0600, dipulihkan ke database baru `lms_restore_m2_pr1_20261128` yang privat;
+17 tabel, 5 migration, 3 tenant, 4 user dan 3 membership teramati pada hasil restore.
+Backup disimpan pula sebagai `../.lms-saas-ops/m2-pr1-pre-migration-20261128.dump.dpapi`
+dan verifikasi round-trip DPAPI CurrentUser cocok dengan file dump asli. File container
+`/tmp/lms_backup_m2_pr1_20261128.dump` dan database hasil restore tetap dipertahankan.
+DPAPI terikat profil Windows pengguna; bukan backup offsite/produksi atau pemulihan
+APP_KEY, Redis, file privat dan grants. Jangan membagikan dump lintas tenant.
+
+Migration final `database/migrations/2026_11_28_000100_create_m2_academic_foundation.php`
+diuji pada `lms_saas_test` dan diterapkan sebagai batch additive melalui operator
+owner existing. Guard membatasi up pada PostgreSQL test atau database/role lokal
+yang ditentukan; down hanya pada database test. Grant ulang berhasil. Pemeriksaan
+pasca-apply: 6 migration, 3 tenant, 4 user dan 3 membership; runtime memiliki DML
+pada kelima tabel, audit INSERT ada sementara UPDATE/DELETE tidak ada. Probe runtime
+insert/update/delete subject dalam transaksi yang di-rollback lulus; runtime checker
+lulus. Ini bukan bukti perubahan nilai seluruh baris M1 atau uji acceptance browser.
+
+PR2 yang sudah disiapkan mencakup adapter pembaca eligibility Identity, adapter profil
+Tenancy, policy domain eligibility profil, workflow internal profil sekolah dan
+perluasan guard AST. Policy eligibility bukan otorisasi actor. Workflow profil
+memeriksa permission, host dan kedua auth version serta audit dalam transaksi; kontrak
+adapter tetap tidak boleh dipakai langsung sebagai pengganti workflow tersebut.
+Belum ada route/UI atau
+workflow lengkap periode, mapel, profil guru/siswa; jangan klaim PR2 selesai atau siap
+untuk digunakan sekolah sebelum exit review PR2, permission dan uji HTTP terpenuhi.
+Tidak ada PR3, data nyata, push atau merge.
+
+Hasil verifikasi yang benar-benar dijalankan:
+
+- Sebelum apply: subset migrasi/guard/contracts 44 test, 469 assertion lulus,
+  termasuk FK silang tenant dan dua race unik PostgreSQL.
+- Regresi pertama setelah apply: 146 lulus, 1 gagal, 1.282 assertion; uji M1
+  mengasumsikan total 95 constraint untuk seluruh schema. Test diperbaiki agar
+  tetap memeriksa 95 constraint pada tabel M1, bukan menghapus pemeriksaan.
+- Subset sesudah perbaikan dan workflow: 18 test, 276 assertion lulus, termasuk
+  audit failure rollback, host/version/permission salah dan pembacaan revocation.
+- Regresi penuh ulang: 148 test, 1.273 assertion lulus, 213,20 detik.
+  Pint 152 file, Composer validate, 6 smoke HTTP tamu, `git diff --check`,
+  runtime storage dan audit privilege check lulus. Setiap hak SELECT/INSERT/
+  UPDATE/DELETE kelima tabel diperiksa terpisah. Probe DML rollback hanya
+  dilakukan pada tabel `subjects`; tidak ada uji browser login/HTTPS atau CI baru.
+- Guard AST tetap statis dan tidak membuktikan seluruh SQL/fungsi dinamis, alias
+  model arbitrer atau akses runtime. Panggilan `SchoolProfiles::update` dikecualikan
+  secara sempit untuk property constructor Identity yang bertipe kontrak tersebut;
+  pengujian juga memastikan receiver tidak bertipe kontrak tetap ditolak.
 
 Ketiga butir ini berbeda dari approval PR0. Reviewer/tanggal acceptance PR1 belum
 diisi; fixture dan pengujian tetap sintetis. Evidence login/HTTPS M1 dan gate produksi

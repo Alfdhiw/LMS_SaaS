@@ -5,12 +5,12 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-// PR1 review draft: excluded from default migration discovery. Never apply to the app DB.
+// Approved local additive batch. Application rollback is intentionally prohibited.
 return new class extends Migration
 {
     public function up(): void
     {
-        $this->requireTestDatabase();
+        $this->requireAllowedUpTarget();
 
         Schema::create('student_profiles', function (Blueprint $table): void {
             $table->id();
@@ -122,7 +122,21 @@ return new class extends Migration
     {
         if (! app()->environment('testing') || DB::connection()->getDriverName() !== 'pgsql'
             || (DB::selectOne('select current_database() as name')->name ?? null) !== 'lms_saas_test') {
-            throw new RuntimeException('M2 PR1 draft is test-only; application DDL requires separate approval and preflight.');
+            throw new RuntimeException('M2 rollback is restricted to the isolated test database.');
         }
+    }
+
+    private function requireAllowedUpTarget(): void
+    {
+        if (DB::connection()->getDriverName() !== 'pgsql') {
+            throw new RuntimeException('M2 migration requires PostgreSQL.');
+        }
+        $target = DB::selectOne('select current_database() as name, current_user as role');
+        if ((app()->environment('testing') && $target->name === 'lms_saas_test')
+            || (app()->environment('local') && $target->name === 'lms_saas' && $target->role === 'lms_user')) {
+            return;
+        }
+
+        throw new RuntimeException('M2 migration refuses this environment, database or role.');
     }
 };

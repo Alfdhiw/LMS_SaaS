@@ -74,7 +74,7 @@ class M1DatabaseContractTest extends TestCase
     {
         $expectedConstraints = [];
         $expectedIndexes = [];
-        foreach (glob(database_path('migrations/*.php')) as $migration) {
+        foreach (glob(database_path('migrations/2026_11_0*.php')) as $migration) {
             $source = file_get_contents($migration);
             preg_match_all('/ADD CONSTRAINT ([a-z0-9_]+)/i', $source, $matches);
             $expectedConstraints = [...$expectedConstraints, ...$matches[1]];
@@ -83,7 +83,15 @@ class M1DatabaseContractTest extends TestCase
         }
         $this->assertNotEmpty($expectedConstraints);
         $this->assertNotEmpty($expectedIndexes);
-        $constraints = DB::select("SELECT conname, convalidated FROM pg_constraint c JOIN pg_namespace n ON n.oid=c.connamespace WHERE n.nspname='public'");
+        $m1Tables = [
+            'migrations', 'users', 'tenants', 'platform_staff', 'tenant_domains', 'tenant_memberships',
+            'roles', 'permissions', 'role_permissions', 'membership_roles', 'tenant_settings',
+            'tenant_audit_logs', 'platform_audit_logs', 'account_invitations', 'account_recovery_requests',
+            'tenant_provisioning_requests', 'platform_mfa_credentials',
+        ];
+        $constraints = DB::table('pg_constraint as c')->join('pg_namespace as n', 'n.oid', '=', 'c.connamespace')
+            ->join('pg_class as t', 't.oid', '=', 'c.conrelid')->where('n.nspname', 'public')
+            ->whereIn('t.relname', $m1Tables)->get(['c.conname', 'c.convalidated']);
         $valid = collect($constraints)->keyBy('conname');
         foreach ($expectedConstraints as $name) {
             $this->assertTrue($valid->has($name), 'Missing constraint: '.$name);

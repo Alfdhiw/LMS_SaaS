@@ -15,19 +15,11 @@ final class M2AcademicFoundationTest extends TestCase
     use M2FoundationFixtures;
     use RefreshDatabase;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->artisan('migrate', ['--path' => self::DRAFT_PATH, '--force' => true])->assertExitCode(0);
-    }
-
-    public function test_draft_requires_explicit_path_and_is_not_in_default_discovery(): void
+    public function test_approved_migration_is_in_default_discovery(): void
     {
         $defaultFiles = app('migrator')->getMigrationFiles([database_path('migrations')]);
-        $this->assertCount(5, $defaultFiles);
-        foreach ($defaultFiles as $path) {
-            $this->assertStringNotContainsString('pending_m2', $path);
-        }
+        $this->assertCount(6, $defaultFiles);
+        $this->assertArrayHasKey('2026_11_28_000100_create_m2_academic_foundation', $defaultFiles);
         foreach (self::FOUNDATION_TABLES as $table) {
             $this->assertTrue(Schema::hasTable($table));
         }
@@ -166,7 +158,7 @@ final class M2AcademicFoundationTest extends TestCase
         $this->assertSame(1, DB::table('student_profiles')->count());
     }
 
-    public function test_explicit_draft_up_down_up_preserves_existing_m1_schema(): void
+    public function test_explicit_m2_up_down_up_preserves_existing_m1_schema(): void
     {
         $this->artisan('migrate:rollback', ['--path' => self::DRAFT_PATH, '--step' => 1, '--force' => true])->assertExitCode(0);
         foreach (self::FOUNDATION_TABLES as $table) {
@@ -181,9 +173,9 @@ final class M2AcademicFoundationTest extends TestCase
         $this->assertSame(6, DB::table('migrations')->count());
     }
 
-    public function test_draft_rejects_non_testing_environment_before_any_schema_change(): void
+    public function test_migration_rejects_wrong_environment_and_test_database_combination(): void
     {
-        $migration = require database_path('migrations/pending_m2/2026_11_28_000100_create_m2_academic_foundation.php');
+        $migration = require database_path('migrations/2026_11_28_000100_create_m2_academic_foundation.php');
         app()->instance('env', 'local');
         try {
             foreach (['up', 'down'] as $operation) {
@@ -191,7 +183,7 @@ final class M2AcademicFoundationTest extends TestCase
                     $migration->{$operation}();
                     $this->fail('Application DDL must remain blocked.');
                 } catch (\RuntimeException $exception) {
-                    $this->assertStringContainsString('test-only', $exception->getMessage());
+                    $this->assertStringContainsString('M2 ', $exception->getMessage());
                 }
             }
         } finally {

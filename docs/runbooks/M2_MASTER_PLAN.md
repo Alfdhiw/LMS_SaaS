@@ -1,5 +1,10 @@
 # M2 Master Plan Administrasi Sekolah
 
+> **Pembaruan 28 November 2026:** PR1 disetujui; DDL M2-A lokal diizinkan dan telah
+> diterapkan setelah preflight. Pekerjaan adapter/policy PR2 diminta pengguna; ini
+> belum merupakan approval PR2 atau bukti seluruh exit review PR2 terpenuhi. Lihat
+> [gate terkini](M2_ARCHITECTURE_GATE.md). Status lama di bawah adalah snapshot.
+
 | Metadata | Nilai |
 |---|---|
 | Versi | 0.1 |

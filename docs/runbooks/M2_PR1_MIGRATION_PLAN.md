@@ -1,5 +1,10 @@
 # M2 PR1 migration plan and review
 
+> **Pembaruan 28 November 2026:** PR1 disetujui pemilik melalui chat dan batch M2-A
+> telah diterapkan pada database aplikasi lokal setelah preflight. Uraian draft dan
+> checkbox di bawah adalah catatan historis persiapan, bukan status operasional terkini.
+> Bukti pelaksanaan terkini dicatat di [architecture gate](M2_ARCHITECTURE_GATE.md).
+
 | Metadata | Nilai |
 |---|---|
 | Versi | 0.1 |

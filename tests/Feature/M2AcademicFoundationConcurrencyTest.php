@@ -14,22 +14,6 @@ final class M2AcademicFoundationConcurrencyTest extends TestCase
     use DatabaseMigrations;
     use M2FoundationFixtures;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->artisan('migrate', ['--path' => self::DRAFT_PATH, '--force' => true])->assertExitCode(0);
-    }
-
-    protected function tearDown(): void
-    {
-        try {
-            // Remove only the pending M2 batch before the M1 trait rolls back its batch.
-            $this->artisan('migrate:rollback', ['--path' => self::DRAFT_PATH, '--step' => 1, '--force' => true])->assertExitCode(0);
-        } finally {
-            parent::tearDown();
-        }
-    }
-
     public function test_concurrent_active_year_inserts_have_exactly_one_winner(): void
     {
         $tenant = $this->foundationTenant('m2-race-year');

@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 
 trait M2FoundationFixtures
 {
-    private const DRAFT_PATH = 'database/migrations/pending_m2';
+    private const DRAFT_PATH = 'database/migrations/2026_11_28_000100_create_m2_academic_foundation.php';
 
     private const FOUNDATION_TABLES = ['student_profiles', 'teacher_profiles', 'academic_years', 'semesters', 'subjects'];
 
