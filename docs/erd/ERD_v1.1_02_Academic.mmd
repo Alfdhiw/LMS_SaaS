@@ -1,0 +1,117 @@
+erDiagram
+    %% Core v1.1 + Academic amendment v0.1, approved PR0 2026-11-28.
+    %% All 10 Academic tables: tenant_owned, public_ulid CHAR(26) UNIQUE,
+    %% UNIQUE(tenant_id,id), timestamps TIMESTAMPTZ, ON DELETE RESTRICT.
+    %% Composite FK always includes tenant_id; course semester/classroom also includes year.
+    TENANT_MEMBERSHIPS ||--o| STUDENT_PROFILES : as_student
+    TENANT_MEMBERSHIPS ||--o| TEACHER_PROFILES : as_teacher
+    ACADEMIC_YEARS ||--o{ SEMESTERS : consists_of
+    ACADEMIC_YEARS ||--o{ CLASSROOMS : has
+    CLASSROOMS ||--o{ CLASSROOM_ENROLLMENTS : places
+    STUDENT_PROFILES ||--o{ CLASSROOM_ENROLLMENTS : enrolled_in
+    TEACHER_PROFILES o|--o{ CLASSROOMS : homeroom_for
+    SEMESTERS ||--o{ COURSES : scheduled_for
+    CLASSROOMS ||--o{ COURSES : learns
+    SUBJECTS ||--o{ COURSES : subject_of
+    COURSES ||--o{ COURSE_TEACHERS : taught_by
+    TEACHER_PROFILES ||--o{ COURSE_TEACHERS : teaches
+    COURSES ||--o{ COURSE_ENROLLMENTS : registers
+    STUDENT_PROFILES ||--o{ COURSE_ENROLLMENTS : participates
+    CLASSROOM_ENROLLMENTS o|--o{ COURSE_ENROLLMENTS : source_same_student
+
+    ACADEMIC_YEARS {
+      bigint id PK
+      char public_ulid UK
+      bigint tenant_id FK
+      varchar name
+      date starts_on
+      date ends_on
+      varchar status "draft active closed; one active per tenant"
+    }
+    SEMESTERS {
+      bigint id PK
+      char public_ulid UK
+      bigint tenant_id FK
+      bigint academic_year_id FK
+      varchar code "odd even; unique per tenant and year"
+      date starts_on
+      date ends_on
+      varchar status "draft active closed; one active per tenant and year"
+    }
+    CLASSROOMS {
+      bigint id PK
+      char public_ulid UK
+      bigint tenant_id FK
+      bigint academic_year_id FK
+      varchar code "unique per tenant and year"
+      varchar label
+      smallint grade_level "7 to 9"
+      bigint homeroom_teacher_profile_id FK "nullable"
+    }
+    CLASSROOM_ENROLLMENTS {
+      bigint id PK
+      char public_ulid UK
+      bigint tenant_id FK
+      bigint academic_year_id FK
+      bigint classroom_id FK "same tenant and year"
+      bigint student_profile_id FK
+      date joined_on
+      date left_on "nullable only when active"
+      varchar status "active left; one active per student and year"
+    }
+    SUBJECTS {
+      bigint id PK
+      char public_ulid UK
+      bigint tenant_id FK
+      varchar code "unique per tenant"
+      varchar name
+      boolean is_active "default true"
+    }
+    COURSES {
+      bigint id PK
+      char public_ulid UK
+      bigint tenant_id FK
+      bigint academic_year_id FK
+      bigint semester_id FK "same tenant and year"
+      bigint classroom_id FK "same tenant and year"
+      bigint subject_id FK
+      varchar title
+      varchar status "draft active closed"
+    }
+    COURSE_TEACHERS {
+      bigint id PK
+      char public_ulid UK
+      bigint tenant_id FK
+      bigint course_id FK
+      bigint teacher_profile_id FK
+      varchar assignment_role "teacher only"
+      varchar status "active inactive"
+      timestamptz assigned_at
+    }
+    COURSE_ENROLLMENTS {
+      bigint id PK
+      char public_ulid UK
+      bigint tenant_id FK
+      bigint course_id FK
+      bigint student_profile_id FK
+      bigint source_classroom_enrollment_id FK "nullable; composite tenant and student FK"
+      varchar status "active withdrawn"
+      timestamptz enrolled_at
+      timestamptz withdrawn_at "nullable only when active"
+    }
+    STUDENT_PROFILES {
+      bigint id PK
+      char public_ulid UK
+      bigint tenant_id FK
+      bigint membership_id FK "same tenant; unique per tenant"
+      varchar nis "nullable; unique non-null per tenant"
+      varchar status "active inactive; default inactive"
+    }
+    TEACHER_PROFILES {
+      bigint id PK
+      char public_ulid UK
+      bigint tenant_id FK
+      bigint membership_id FK "same tenant; unique per tenant"
+      varchar employee_code "nullable; unique non-null per tenant"
+      varchar status "active inactive; default inactive"
+    }

@@ -22,6 +22,7 @@
 !/docs/erd/
 /docs/erd/*
 !/docs/erd/ERD_M2_Academic_Amendment_v0.1.md
+!/docs/erd/ERD_v1.1_02_Academic.mmd
 !/docs/runbooks/
 /docs/runbooks/*
 !/docs/runbooks/M1_ARCHITECTURE_GATE.md
@@ -31,6 +32,7 @@
 !/docs/runbooks/M1_FINAL_REVIEW.md
 !/docs/runbooks/M2_MASTER_PLAN.md
 !/docs/runbooks/M2_ARCHITECTURE_GATE.md
+!/docs/runbooks/M2_PR1_MIGRATION_PLAN.md
 # Only sanitized public-browser evidence; never raw DOM, cookies, certificates, or profiles.
 !/docs/evidence/
 /docs/evidence/*

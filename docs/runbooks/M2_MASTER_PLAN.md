@@ -4,7 +4,7 @@
 |---|---|
 | Versi | 0.1 |
 | Tanggal | 27 November 2026 |
-| Status | Accepted — PR0 Approved 28 November 2026; penyusunan PR1 diizinkan, belum dimulai |
+| Status | Accepted — PR0 Approved; persiapan PR1 selesai untuk review 28 November 2026; hasil PR1/DDL aplikasi belum disetujui |
 | Branch dan baseline | `Milestone-2` / `4b29461`; working tree bersih saat mulai |
 | Requirement | ACAD-001–007 dan course/enrollment ERD v1.1 |
 
@@ -54,9 +54,11 @@ HTTPS dan readiness produksi belum lengkap. M2 tidak memberi waiver atau izin da
 | PR5 | CSV preview/confirm/report/cleanup; port invitation/reissue Identity untuk akun baru; tidak ada tabel impor tambahan | Validasi seluruh baris, atomicity, retry setelah commit/cache failure, wrong tenant/actor/version, kode privat dan missing preview lulus |
 | PR6 | Regresi, browser tiga sekolah, UX mobile, runbook operasional dan final review | Exit ACAD-001–007 terbukti dan pemilik memberi approval; tidak otomatis mulai M3 |
 
-Penyusunan PR1 telah diizinkan, tetapi belum dimulai pada turn pencatatan approval.
-Sinkronisasi dictionary/diagram dan perincian migration masuk PR1; apply database
-aplikasi tetap menunggu review daftar migration/preflight dan izin DDL terpisah.
+Penyusunan PR1 diminta pengguna pada 28 November setelah pencatatan approval PR0.
+[Migration plan PR1](M2_PR1_MIGRATION_PLAN.md) merinci persiapan contract/DTO,
+architecture guard, sinkronisasi dictionary/diagram dan draf schema M2-A yang hanya
+diuji pada database test. Adapter/layanan bisnis dan UI belum dibuat. Apply database
+aplikasi tetap menunggu review hasil PR1, daftar migration/preflight dan izin DDL terpisah.
 PR2–PR6 belum diizinkan; tiap tahap berhenti untuk review sebelum lanjut.
 Setiap tahap menyerahkan
 file berubah, hasil tes yang benar-benar dijalankan, blocker/approval, analisis dampak,
@@ -134,3 +136,4 @@ Saran commit pencatatan approval PR0: `docs: record M2 PR0 approval and synchron
 |---|---|---|
 | 0.1 | 2026-11-27 | Proposal scope, urutan PR0–PR6, kontrak, test matrix dan gate DDL |
 | 0.1 — approval | 2026-11-28 | Pengguna menyetujui semua PR0; plan Accepted, persiapan PR1 diizinkan tanpa memulai tahap atau apply DDL aplikasi |
+| 0.1 — persiapan PR1 | 2026-11-28 | Pengguna meminta persiapan PR1; migration plan, kontrak/DTO dan schema test disiapkan, tanpa acceptance hasil PR1 atau izin DDL/PR2 |

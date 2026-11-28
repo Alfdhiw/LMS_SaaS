@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased — M2 PR1 preparation (28 November 2026)
+
+- Atas permintaan pengguna, siapkan port/DTO eligibility Identity dan school profile Tenancy; validasi,
+  batas batch, immutability dan allowlist diuji tanpa adapter/binding/route atau UI baru.
+- Perluas architecture guard untuk owner 10 tabel Academic, forbidden edges, public port-only imports
+  dan larangan direct write lintas modul. Guard statis tetap bukan pengganti policy/runtime tests.
+- Tambah draf M2-A (5 tabel) pada subfolder pending yang tidak di-discover default dan menolak up/down
+  di luar environment testing/PostgreSQL lms_saas_test. Uji katalog/FK/check/index, up/down dan dua race
+  periode aktif menggunakan proses independen; tidak menjalankan migration aplikasi atau rebuild M1.
+- Sinkronkan Core dictionary/diagram dengan amendment PR0 Accepted; tambahkan migration plan/preflight.
+  Pengecualian Git hanya plan PR1 dan diagram Academic; Core/AGENTS lokal tetap di-ignore.
+- Tidak mengubah Docker, dependency, credential/role, permission, status approval PR0/M1 atau memberi
+  acceptance hasil PR1/izin DDL/PR2. Tidak melakukan Git commit/push/merge.
+- Subset lulus 43 test/477 assertion. Regresi penuh awal 142 lulus/2 timeout subprocess M1 (15 detik);
+  runtime terpisah 4 test/25 assertion dan regresi penuh ulang 144 test/1247 assertion lulus tanpa
+  perubahan kode/timeout. Pint 147 file, Composer validate, enam HTTP guest smoke dan runtime probe lulus.
+- Schema fingerprint dan delapan jumlah baris aplikasi sebelum/sesudah cocok persis; 0 Blade root-owned/
+  tidak terbaca, log writable sebagai www-data. Static docs/digest/manifest/ignore guard dan diff check lulus;
+  tidak mengklaim acceptance adapter/CRUD/browser M2, grants tabel aplikasi baru, HTTPS, load test atau CI baru.
+
 ## Unreleased — M2 PR0 approval (28 November 2026)
 
 - Pengguna menyatakan "saya approval semua untuk PR0 di M2". Catat PR0 Approved, scope ACAD-001–007,

@@ -13,8 +13,10 @@ di baseline kode `4b29461`. Amendment ini melengkapi rincian physical schema dan
 M2, disetujui melalui [gate PR0](../runbooks/M2_ARCHITECTURE_GATE.md) pada 28 November
 2026. Core v1.1 dan amendment ini digunakan bersama: rincian M2 yang diperjelas di
 sini mengikuti amendment, sedangkan M1/domain lain tetap mengikuti Core. Sinkronisasi
-anotasi dictionary/diagram aktif menjadi pekerjaan PR1 sebelum migration final.
-Tidak ada SQL eksekusi atau perubahan tabel M1 pada tahap dokumen ini.
+anotasi dictionary/diagram aktif diselaraskan pada persiapan PR1; rincian file dan
+gate apply ada pada [migration plan PR1](../runbooks/M2_PR1_MIGRATION_PLAN.md).
+Dokumen amendment bukan SQL eksekusi. Draf M2-A hanya diuji di database test,
+bukan perubahan tabel M1 atau DDL pada database aplikasi.
 
 ## Konvensi schema yang disetujui
 
@@ -85,8 +87,8 @@ validasi domain di dalam transaksi, bukan dijamin oleh FK source tiga kolom ters
 
 Diagram hubungan Academic baseline masih menjadi peta relasi; amendment ini tidak
 menambah entitas atau edge di luar 10 tabel dan FK yang sudah dirancang. Diagram/
-dictionary aktif harus disinkronkan pada PR1 sebelum migration final, terutama
-anotasi status, source dan candidate keys. Amendment ini melengkapi, bukan
+dictionary Core serta [diagram Academic](ERD_v1.1_02_Academic.mmd) telah disinkronkan
+pada persiapan PR1, terutama anotasi status, source dan candidate keys. Amendment ini melengkapi, bukan
 supersede keseluruhan Core v1.1; persetujuan desain tidak membuktikan schema terpasang.
 
 ## Invariant domain yang tidak dijamin FK
@@ -136,3 +138,4 @@ SQLite tidak menggantikan bukti ini. Lihat [master plan](../runbooks/M2_MASTER_P
 |---|---|---|
 | 0.1 | 2026-11-27 | Proposal physical schema 10 tabel Academic dan batch additive |
 | 0.1 — approval | 2026-11-28 | Pengguna menyetujui semua PR0; amendment Accepted tanpa perubahan desain; dictionary/diagram dan DDL tetap mengikuti gate PR1 |
+| 0.1 — sinkronisasi PR1 | 2026-11-28 | Dictionary/diagram diselaraskan dengan keputusan Accepted; draf M2-A diuji hanya di database test, hasil PR1 dan DDL aplikasi belum disetujui |

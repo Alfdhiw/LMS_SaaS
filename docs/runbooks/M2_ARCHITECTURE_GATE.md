@@ -1,4 +1,4 @@
-# M2 Architecture Gate dan approval PR0
+# M2 Architecture Gate dan approval PR0–PR1
 
 | Metadata | Nilai |
 |---|---|
@@ -7,7 +7,7 @@
 | Approval PR0 | 28 November 2026, oleh pengguna/pemilik proyek melalui chat |
 | Status | Approved untuk PR0; PRD, amendment ERD dan plan v0.1 Accepted |
 | Baseline | `4b29461`, branch `Milestone-2` |
-| Tahap sekarang | PR0 Approved; penyusunan PR1 diizinkan, belum dimulai; DDL aplikasi belum diizinkan |
+| Tahap sekarang | PR0 Approved; persiapan PR1 selesai dan siap review; hasil PR1/DDL aplikasi/PR2 belum disetujui |
 
 Pada 28 November 2026 pengguna menyatakan: "saya approval semua untuk PR0 di M2".
 Persetujuan ini menerima scope PR0, D01–D06, PRD Academic, amendment ERD dan rencana
@@ -105,3 +105,51 @@ Baseline desain lama tetap di-ignore sesuai aturan existing; dokumen/gate M2 dip
 secara sempit untuk Git. Review GitHub/clone lain belum membawa seluruh baseline
 Accepted yang ditautkan. Menentukan baseline sanitized mana yang boleh dilacak adalah
 follow-up pemilik, bukan membuka seluruh `docs/` atau secret secara otomatis.
+
+## Persiapan PR1 pada 28 November 2026
+
+Pengguna menyatakan: "lanjutkan persiapan PR1". Baseline kerja `08195f8`, branch
+`Milestone-2`, working tree bersih sebelum perubahan. Izin ini melaksanakan
+persiapan PR1 yang disetujui pada PR0, bukan approval hasil PR1 atau izin DDL aplikasi.
+Catatan "PR1 belum dimulai" di bagian pencatatan PR0 adalah snapshot sebelumnya.
+
+[Migration plan PR1](M2_PR1_MIGRATION_PLAN.md) memuat signature contract, daftar tabel,
+file/digest draf, preflight dan batas bukti uji. Kontrak/DTO Identity dan Tenancy
+ditambahkan tanpa implementasi/binding/route; architecture guard memuat owner seluruh
+10 tabel dan dependency rules Academic. Dictionary Core/diagram diselaraskan dengan
+amendment Accepted, tanpa keputusan bisnis baru.
+
+Draf lima tabel M2-A ada di `database/migrations/pending_m2`, tidak ikut discovery
+default. Up/down hanya diizinkan pada PostgreSQL `lms_saas_test` dalam environment
+testing. Tidak ada migration final, schema/data aplikasi, grant runtime aplikasi,
+credential, Docker, permission atau Git commit/push/merge yang diubah.
+
+Hasil verifikasi 28 November 2026:
+
+- Subset PR1/architecture: 43 test/477 assertion lulus. Dua race unique index memakai
+  proses independen dan masing-masing hanya satu sukses.
+- Regresi penuh pertama: 142 lulus, 2 timeout subprocess M1 (15 detik), 1241 assertion.
+  Pengulangan runtime terpisah lulus 4 test/25 assertion tanpa perubahan kode/timeout.
+  Regresi penuh kedua kemudian lulus 144 test/1247 assertion, 511,99 detik; hasil run
+  pertama tidak dihapus atau disamakan dengan bukti run kedua.
+- Pint seluruh project 147 file dan Composer validate lulus; enam smoke HTTP tamu
+  lulus. Tidak ada browser/HTTPS acceptance atau CI GitHub baru pada tahap ini.
+- Probe read-only aplikasi sebelum/sesudah cocok: schema fingerprint yang sama,
+  5 migration, 3 tenant, 4 user dan seluruh delapan jumlah baris yang diukur tetap.
+  Runtime tetap lms_runtime dengan audit SELECT/INSERT; permission log/Blade aman
+  bagi www-data, tanpa root-owned Blade baru atau direktori test di container app.
+- Pemeriksaan statis tautan file, entitas diagram, digest draf, ignore guard, manifest
+  perubahan dan `git diff --check` lulus. Mermaid belum dirender; detail dan daftar
+  file lengkap ada pada migration plan PR1. Core/AGENTS lokal tetap di-ignore.
+
+Error sintaks test immutability pada run awal sudah diperbaiki sebelum subset lulus.
+Tidak ada blocker implementasi pada scope persiapan; approval hasil PR1, preflight
+DDL dan implementasi adapter/business policy PR2 tetap merupakan gate terbuka.
+
+- [ ] Hasil persiapan PR1, contract/DTO dan migration plan disetujui pengguna.
+- [ ] Finalisasi/apply batch M2-A pada database aplikasi diizinkan setelah preflight.
+- [ ] Diizinkan lanjut PR2 setelah review PR1.
+
+Ketiga butir ini berbeda dari approval PR0. Reviewer/tanggal acceptance PR1 belum
+diisi; fixture dan pengujian tetap sintetis. Evidence login/HTTPS M1 dan gate produksi
+tidak diberi waiver oleh persiapan ini.

@@ -7,7 +7,8 @@
 | Status milestone — 25 November 2026 | PR6 Approved; M1 Closed by owner untuk lokal/sintetis; evidence browser/HTTPS belum lengkap; bukan production approval |
 | Bukti browser publik — 25 November 2026 | 11 pemeriksaan HTTP/tamu Chrome lulus; screenshot dan manifest tersedia; bukan login/HTTPS acceptance lengkap |
 | Perencanaan M2 — 27 November 2026 | Branch Milestone-2 / 4b29461; dokumen awal PR0 disusun sebagai Proposed |
-| Approval M2 — 28 November 2026 | PR0 Approved oleh pengguna; PRD Academic/amendment/plan v0.1 Accepted; penyusunan PR1 diizinkan, belum dimulai; DDL aplikasi belum diizinkan |
+| Approval M2 — 28 November 2026 | PR0 Approved oleh pengguna; PRD Academic/amendment/plan v0.1 Accepted; penyusunan PR1 diizinkan; DDL aplikasi belum diizinkan |
+| Persiapan PR1 — 28 November 2026 | Selesai untuk review, baseline 08195f8; contract/DTO, architecture guard, sinkronisasi ERD/diagram dan draf M2-A test-only; regresi ulang 144 test/1247 assertion lulus; hasil PR1/DDL/PR2 belum disetujui |
 | Tujuan | Satu titik referensi bagi Codex untuk versi dokumen, status persetujuan, dan prioritas sumber |
 
 > `DOCUMENT_INDEX.md` mencatat hasil review dan **tidak menyetujui dokumen secara otomatis**. Status `Accepted` merujuk pada approval record manusia: baseline M1 pada `docs/runbooks/M1_ARCHITECTURE_GATE.md`, dan dokumen M2 pada `docs/runbooks/M2_ARCHITECTURE_GATE.md`. Perubahan tanggal atau urutan file bukan approval; gate produksi M1 dan izin DDL per batch tetap berlaku.
@@ -27,7 +28,8 @@
 
 Untuk M2, Core v1.1 dan amendment Accepted digunakan bersama. Rincian M2 yang
 diperjelas amendment mengikuti amendment; M1/domain lain tetap mengikuti Core.
-Sinkronisasi anotasi dictionary/diagram aktif dikerjakan pada PR1 sebelum migration final.
+Anotasi dictionary/diagram aktif disinkronkan pada persiapan PR1; migration final
+tetap menunggu gate DDL terpisah.
 
 ## B. Referensi historis
 
@@ -59,7 +61,7 @@ Jika satu dokumen berubah, revisi indeks ini dan tautan ke versi terbaru pada `A
 
 - **M0 scaffold dan tooling:** dapat dilakukan sambil proposal direview, jika tidak mengunci schema/keputusan terbuka.
 - **M1 migration final dan auth/provisioning:** baseline ADR-001, ADR-002, dan ERD v1.1 telah disetujui; lanjutkan sesuai urutan PR dan acceptance checklist M1.
-- **M2:** PR0 Approved pada 28 November 2026; penyusunan PR1 diizinkan, belum dimulai. PR2–PR6 dan DDL aplikasi menunggu izin tersendiri sesuai gate M2.
+- **M2:** PR0 Approved; persiapan PR1 diminta pengguna pada 28 November 2026. Hasil PR1, PR2–PR6 dan DDL aplikasi menunggu review/izin tersendiri sesuai gate M2.
 - **Pilot sekolah nyata:** hanya sesudah security, data protection, backup restore, dan uji beban terpenuhi.
 
 ## F. Perubahan yang menjadi prioritas saat review
@@ -183,3 +185,28 @@ dimulai pada pencatatan approval ini. Dictionary/diagram dan migration plan/pref
 sebelum izin DDL aplikasi; PR2–PR6 memerlukan izin per tahap. Dokumen M2/gate tetap dipilih secara selektif
 untuk Git; baseline desain lokal dan file privat lain tetap mengikuti ignore existing. Tidak ada perubahan kode,
 schema/database, Docker, permission atau Git commit/push/merge saat pencatatan approval ini.
+
+## P. Persiapan PR1 M2 untuk review
+
+Pengguna meminta "lanjutkan persiapan PR1" pada 28 November 2026 setelah commit
+approval PR0 `08195f8` di branch `Milestone-2`. Rincian ada pada
+[M2 PR1 Migration Plan](runbooks/M2_PR1_MIGRATION_PLAN.md), versi 0.1 Draft untuk review,
+bukan Accepted otomatis. Record tahap/approval tetap pada gate M2.
+
+Kontrak/DTO internal Identity dan Tenancy belum di-bind/diimplementasikan; tidak
+menambah route/UI. Architecture guard dan schema PostgreSQL test mencakup fondasi
+yang disiapkan. Draf lima tabel M2-A ditempatkan di subfolder pending, dikecualikan
+dari discovery default dan dijaga test-only. Schema rombel/course tetap PR3/PR4.
+Core dictionary lokal dan [diagram Academic](erd/ERD_v1.1_02_Academic.mmd) disinkronkan
+dengan amendment Accepted; tidak menambah keputusan PR0 atau mengubah M1.
+
+Pengecualian Git tambahan hanya diagram Academic dan migration plan PR1. Enam
+baseline desain/AGENTS yang sebelumnya lokal tetap di-ignore; tidak membuka secret,
+dump atau seluruh docs. Database aplikasi tidak diberi DDL/grants, dan tidak ada
+Git commit/push/merge. Status "belum dimulai" pada record PR0 sebelumnya adalah historis.
+
+Regresi penuh kedua lulus 144 test/1247 assertion setelah dua timeout M1 pada run
+pertama dan pengulangan terpisah yang lulus tanpa perubahan kode/timeout. Pint 147
+file, Composer validate, enam HTTP guest smoke serta probe read-only aplikasi/runtime
+lulus. Fingerprint schema dan jumlah baris yang diukur tetap; bukan acceptance fitur
+M2/HTTPS atau CI baru. Hasil lengkap dan gate preflight ada pada plan/gate PR1.

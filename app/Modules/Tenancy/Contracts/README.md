@@ -10,3 +10,21 @@ the same registry contract for onboarding instead of directly writing settings f
 
 Immutable `TenantContext`, the `TenantContextResolver` interface and the scoped store live in `App/Support/Tenancy`.
 `TenantResolver` implements the shared read-only resolver; it does not authenticate members.
+
+## M2 PR1 school profile contract
+
+`SchoolProfiles` declares read, transaction-scoped lock and update of the verified
+active tenant's own school profile. `SchoolProfileUpdate` accepts exactly name,
+IANA timezone and an explicit nullable accent color; name max 200 matches existing
+M1 storage. Slug, hosts, tenant ID, status, packages, logo and onboarding JSON cannot
+be mass-assigned. Stored UTC events do not move when display timezone changes.
+
+The owning workflow authenticates/authorizes through Identity before read and,
+inside a write transaction, locks Tenancy first, rechecks the active actor and both
+auth versions, calls update and records audit atomically. Tenancy does not import
+Identity. `lock` must re-resolve tenant/domain/status and lock settings before writes;
+read must also revalidate scope rather than trusting an arbitrary context object.
+
+PR1 adds the interface and immutable DTOs, not an adapter, binding or HTTP feature.
+PR2 must prove scope/permission/version checks, allowlist and audit-failure rollback
+with a real implementation. Existing platform metadata actions remain unchanged.

@@ -24,6 +24,10 @@ final class M1ArchitectureTest extends TestCase
         'account_recovery_requests' => 'Identity', 'platform_mfa_credentials' => 'Identity',
         'platform_staff' => 'Platform', 'tenant_provisioning_requests' => 'Platform',
         'tenant_audit_logs' => 'Support', 'platform_audit_logs' => 'Support',
+        'student_profiles' => 'Academic', 'teacher_profiles' => 'Academic', 'academic_years' => 'Academic',
+        'semesters' => 'Academic', 'subjects' => 'Academic', 'classrooms' => 'Academic',
+        'classroom_enrollments' => 'Academic', 'courses' => 'Academic',
+        'course_teachers' => 'Academic', 'course_enrollments' => 'Academic',
     ];
 
     public function test_support_has_no_module_dependency_and_module_edges_are_acyclic(): void
@@ -36,12 +40,8 @@ final class M1ArchitectureTest extends TestCase
                     $this->assertStringNotContainsString('App\\Modules\\', $source, $path);
                 }
             }
-            if (str_contains($path, '/Modules/Tenancy/')) {
-                $this->assertStringNotContainsString('App\\Modules\\Identity\\', $source, $path);
-                $this->assertStringNotContainsString('App\\Modules\\Platform\\', $source, $path);
-            }
-            if (str_contains($path, '/Modules/Identity/')) {
-                $this->assertStringNotContainsString('App\\Modules\\Platform\\', $source, $path);
+            if (preg_match('~/Modules/([^/]+)/~', $path, $match) === 1) {
+                $this->assertSame([], $this->dependencyViolations($source, $match[1]), $path);
             }
         }
     }
@@ -68,6 +68,58 @@ Store::table('account_invitations')->where('tenant_id', 1)->delete();
 PHP;
         $this->assertCount(2, $this->writeViolations($source, 'Platform'));
         $this->assertSame([], $this->writeViolations("<?php use Illuminate\\Support\\Facades\\DB; DB::table('tenants')->where('id', 1)->update(['name' => 'Synthetic']);", 'Tenancy'));
+    }
+
+    public function test_academic_owns_all_ten_tables_and_other_modules_cannot_write_them(): void
+    {
+        foreach ([
+            'student_profiles', 'teacher_profiles', 'academic_years', 'semesters', 'subjects',
+            'classrooms', 'classroom_enrollments', 'courses', 'course_teachers', 'course_enrollments',
+        ] as $table) {
+            $source = "<?php use Illuminate\\Support\\Facades\\DB as Store; Store::table('{$table}')->insert(['tenant_id' => 1]);";
+            $this->assertSame([], $this->writeViolations($source, 'Academic'), $table);
+            foreach (['Identity', 'Tenancy', 'Platform', 'Learning', 'Assessment'] as $consumer) {
+                $this->assertCount(1, $this->writeViolations($source, $consumer), $consumer.': '.$table);
+            }
+        }
+    }
+
+    public function test_academic_cannot_write_identity_or_tenancy_and_imports_only_public_ports(): void
+    {
+        foreach (['users', 'tenant_memberships', 'membership_roles', 'account_invitations', 'tenants', 'tenant_settings'] as $table) {
+            $source = "<?php use Illuminate\\Support\\Facades\\DB; DB::table('{$table}')->where('id', 1)->update(['status' => 'active']);";
+            $this->assertCount(1, $this->writeViolations($source, 'Academic'), $table);
+        }
+        $this->assertSame([], $this->dependencyViolations('<?php use App\Modules\Identity\Contracts\MembershipEligibilityReader; use App\Modules\Tenancy\Data\SchoolProfile;', 'Academic'));
+        $this->assertNotEmpty($this->dependencyViolations('<?php use App\Modules\Identity\Services\PermissionChecker as Checker;', 'Academic'));
+        $this->assertNotEmpty($this->dependencyViolations('<?php use App\Modules\Academic\Contracts\CourseReader;', 'Identity'));
+        $this->assertNotEmpty($this->dependencyViolations('<?php use App\Modules\Learning\Contracts\Materials;', 'Academic'));
+        $this->assertNotEmpty($this->dependencyViolations('<?php use App\Modules\Academic\Queries\StudentDirectory;', 'Platform'));
+        $this->assertSame([], $this->dependencyViolations('<?php use App\Modules\Academic\Contracts\OnboardingSummary;', 'Platform'));
+    }
+
+    private function dependencyViolations(string $source, string $module): array
+    {
+        $forbidden = [
+            'Tenancy' => ['Identity', 'Platform', 'Academic', 'Learning', 'Assessment'],
+            'Identity' => ['Platform', 'Academic', 'Learning', 'Assessment'],
+            'Academic' => ['Platform', 'Learning', 'Assessment'],
+            'Learning' => ['Platform', 'Assessment'],
+            'Assessment' => ['Platform'],
+        ];
+        $violations = [];
+        preg_match_all('/App\\\\Modules\\\\([A-Za-z]+)\\\\([A-Za-z]+)/', $source, $references, PREG_SET_ORDER);
+        foreach ($references as $reference) {
+            [$fullName, $target, $layer] = $reference;
+            if (in_array($target, $forbidden[$module] ?? [], true)
+                || ($module === 'Academic' && in_array($target, ['Identity', 'Tenancy'], true)
+                    && ! in_array($layer, ['Contracts', 'Data'], true))
+                || ($module === 'Platform' && $target === 'Academic' && ! in_array($layer, ['Contracts', 'Data'], true))) {
+                $violations[] = $module.' cannot import '.$fullName;
+            }
+        }
+
+        return $violations;
     }
 
     private function writeViolations(string $source, string $module): array

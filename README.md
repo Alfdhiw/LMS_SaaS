@@ -5,10 +5,20 @@
 **Pembaruan 28 November 2026:** PR0 M2 disetujui pengguna pada branch `Milestone-2`, baseline `4b29461`
 (perbaikan isolasi file test M1). [PRD Academic](docs/prd/PRD_Modul_Academic_Administration_v0.1.md),
 [amendment ERD](docs/erd/ERD_M2_Academic_Amendment_v0.1.md), dan [master plan](docs/runbooks/M2_MASTER_PLAN.md)
-v0.1 berstatus Accepted, termasuk D01–D06 dan izin penyusunan PR1; tahap PR1 belum dimulai.
+v0.1 berstatus Accepted, termasuk D01–D06 dan izin penyusunan PR1.
 Bukti keputusan dan izin DDL yang terpisah ada di [gate M2](docs/runbooks/M2_ARCHITECTURE_GATE.md).
-Belum ada fitur/schema M2 yang diimplementasikan atau migration baru yang dijalankan. DDL database aplikasi
+Belum ada fitur/UI Academic atau schema M2 yang diterapkan pada database aplikasi. DDL database aplikasi
 menunggu review migration plan/preflight PR1; PR2–PR6 belum diizinkan. Status M1/produksi tidak berubah.
+
+**Persiapan PR1, 28 November 2026:** diminta pengguna pada baseline `08195f8`.
+Persiapan selesai untuk review: kontrak/DTO dan architecture guard; draf lima tabel Academic diuji hanya
+pada `lms_saas_test` melalui path eksplisit dan guard testing. Kontrak belum mempunyai
+adapter/binding/route baru. [Migration plan PR1](docs/runbooks/M2_PR1_MIGRATION_PLAN.md)
+memuat batas implementasi, evidence dan preflight; hasil PR1/DDL aplikasi masih menunggu review.
+Regresi penuh ulang lulus 144 test/1247 assertion, Pint 147 file, Composer validate
+dan enam HTTP guest smoke lulus. Dua timeout M1 pada run pertama tetap dicatat di
+plan; pengulangan tanpa perubahan kode/timeout lulus. Fingerprint schema dan jumlah
+baris aplikasi sebelum/sesudah pengujian tetap sama.
 
 ## 1. Apa yang tersedia
 
