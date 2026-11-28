@@ -4,12 +4,14 @@ namespace App\Providers;
 
 use App\Modules\Identity\Actions\ManageBootstrapAdminAccounts;
 use App\Modules\Identity\Actions\ManageTenantMemberships;
+use App\Modules\Identity\Contracts\AcademicIdentity;
 use App\Modules\Identity\Contracts\BootstrapAdminAccounts;
 use App\Modules\Identity\Contracts\MembershipEligibilityReader;
 use App\Modules\Identity\Contracts\PermissionCatalogue;
 use App\Modules\Identity\Contracts\TenantMemberships;
 use App\Modules\Identity\Queries\MembershipEligibilityQuery;
 use App\Modules\Identity\Queries\PermissionCatalogueQuery;
+use App\Modules\Identity\Services\AcademicIdentityService;
 use App\Modules\Platform\Services\PlatformStaffAccess;
 use App\Modules\Tenancy\Actions\ManageSchoolProfiles;
 use App\Modules\Tenancy\Actions\ManageTenantRegistry;
@@ -34,6 +36,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(CentralStaffAccess::class, PlatformStaffAccess::class);
         $this->app->bind(PermissionCatalogue::class, PermissionCatalogueQuery::class);
         $this->app->bind(MembershipEligibilityReader::class, MembershipEligibilityQuery::class);
+        $this->app->bind(AcademicIdentity::class, AcademicIdentityService::class);
         $this->app->bind(SchoolProfiles::class, ManageSchoolProfiles::class);
         $this->app->singleton(TenantResolver::class);
         $this->app->bind(TenantContextResolver::class, TenantResolver::class);

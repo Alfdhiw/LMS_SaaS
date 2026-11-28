@@ -1,5 +1,8 @@
 # M2 Architecture Gate dan approval PR0–PR1
 
+> Status terkini: PR1 disetujui, workflow/UI PR2 disiapkan untuk review dan belum
+> disetujui. PR3 belum diizinkan. Header dan riwayat sebelumnya adalah snapshot.
+
 | Metadata | Nilai |
 |---|---|
 | Tanggal | 27 November 2026 |
@@ -211,6 +214,35 @@ Hasil verifikasi yang benar-benar dijalankan:
   secara sempit untuk property constructor Identity yang bertipe kontrak tersebut;
   pengujian juga memastikan receiver tidak bertipe kontrak tetap ditolak.
 
-Ketiga butir ini berbeda dari approval PR0. Reviewer/tanggal acceptance PR1 belum
-diisi; fixture dan pengujian tetap sintetis. Evidence login/HTTPS M1 dan gate produksi
-tidak diberi waiver oleh persiapan ini.
+Catatan historis persiapan PR1: ketiga butir berbeda dari approval PR0 dan saat itu
+belum disetujui. Approval berikutnya dicatat pada bagian "Approval PR1 dan izin PR2".
+Fixture tetap sintetis; evidence login/HTTPS M1 dan gate produksi tidak diberi waiver.
+
+## Implementasi workflow dan UI PR2 untuk review
+
+Pengguna meminta melanjutkan penyelesaian workflow dan UI PR2. Halaman sekolah yang
+tersedia adalah `/school/profile`, `/academic/periods`, `/academic/subjects`, dan
+`/academic/profiles/student` atau `/academic/profiles/teacher`, melalui host sekolah.
+Permission tetap `school.view/update`, `academic.manage`, `subjects.manage`, dan
+`members.view` sesuai aksi. Host terverifikasi dan sesi dengan kedua auth version
+digunakan; mutasi akademik mengunci tenant, memeriksa ulang otorisasi dan mencatat
+audit dalam transaksi. Tidak ada update credential atau perubahan membership oleh Academic.
+
+Draft tahun yang belum memiliki semester/rombel dapat diedit; tahun dan semester
+closed tidak dapat diedit atau dibuka kembali. Bentuk perubahan ini sengaja konservatif
+untuk menjaga histori. Profil berasal dari username membership sekolah yang sama,
+dibuat inactive dan hanya dapat diaktifkan dengan user, membership dan role yang sesuai.
+UI menampilkan status dan eligibility terpisah. Mapel dapat dinonaktifkan tanpa hapus.
+
+Regresi penuh awal untuk implementasi PR2 lulus 153 test/1.341 assertion sebelum
+penguatan pemeriksaan resource scoped sebelum validasi payload. Uji HTTP awal yang
+dijalankan ketika controller dan template sedang berubah gagal akibat variabel view;
+pengulangan pada kode selaras lulus. Browser bawaan gagal terhubung karena metadata
+sandbox tidak tersedia; uji visual/login dan CI GitHub belum dibuktikan. Uji terarah
+setelah penguatan resource scoped lulus 11 test/217 assertion, mencakup payload tidak
+valid pada ULID tenant lain, CSRF, audit rollback, revocation dan dua admin sekolah.
+Data tes sintetis saja;
+tidak ada migration, perubahan Docker, seed aplikasi, commit, push, merge, atau PR3.
+
+- [ ] Hasil PR2 direview dan disetujui pengguna.
+- [ ] Pengguna mengizinkan lanjut PR3.

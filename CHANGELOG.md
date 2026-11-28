@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — workflow dan UI M2 PR2 (28 November 2026)
+
+- Tambah halaman dan workflow profil sekolah, tahun/semester, mata pelajaran, dan
+  profil guru/siswa manual. Mutasi memakai context host, permission, transaction,
+  pemeriksaan ulang sesi, tenant lock dan audit; tanpa mengubah credential/membership.
+- Identity menyediakan port scoped untuk otorisasi dan identitas anggota seperlunya.
+  Profil invited dibuat inactive; aktivasi memeriksa user/membership/role terkini.
+- Tahun dan semester closed tidak dapat dibuka kembali; bentrok tanggal/active
+  ditolak. Data akademik tidak dihapus untuk menjaga histori.
+- Tidak ada schema baru, perubahan Docker, permission baru, PR3, push/merge atau
+  persetujuan hasil PR2. Bukti dan keterbatasan dicatat pada gate M2.
+
 ## Unreleased — M2 PR1 approval dan PR2 parsial (28 November 2026)
 
 - Catat approval PR1, izin migration M2-A lokal dan permintaan adapter/policy PR2.

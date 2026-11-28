@@ -95,6 +95,9 @@ final class TenantAuthController extends Controller
             'logoutAction' => url('/logout'),
             'manageMembers' => $user !== null && app(PermissionChecker::class)->allows($user, $context, (int) $request->attributes->get('tenant_membership')->id, 'members.invite'),
             'manageRecovery' => $user !== null && app(PermissionChecker::class)->allows($user, $context, (int) $request->attributes->get('tenant_membership')->id, 'members.assisted_reset'),
+            'manageAcademic' => $user !== null && app(PermissionChecker::class)->allows($user, $context, (int) $request->attributes->get('tenant_membership')->id, 'academic.manage'),
+            'manageSubjects' => $user !== null && app(PermissionChecker::class)->allows($user, $context, (int) $request->attributes->get('tenant_membership')->id, 'subjects.manage'),
+            'viewMembers' => $user !== null && app(PermissionChecker::class)->allows($user, $context, (int) $request->attributes->get('tenant_membership')->id, 'members.view'),
         ]);
     }
 

@@ -10,6 +10,14 @@
         <h1>{{ $title }}</h1>
         <p>{{ $subtitle }}</p>
         <p>Selamat datang, {{ $userName }}.</p>
+        <p><a href="/school/profile">Profil sekolah</a></p>
+        @if ($manageAcademic ?? false)
+            <p><a href="/academic/periods">Tahun ajaran dan semester</a></p>
+            @if ($viewMembers ?? false)
+                <p><a href="/academic/profiles/teacher">Profil guru</a> · <a href="/academic/profiles/student">Profil siswa</a></p>
+            @endif
+        @endif
+        @if ($manageSubjects ?? false)<p><a href="/academic/subjects">Mata pelajaran</a></p>@endif
         <p><a href="/password/change">Ganti password</a></p>
         @if ($manageMembers ?? false)
             <p><a href="/members/manage">Kelola undangan anggota</a></p>

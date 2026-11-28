@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Academic\AcademicController;
+use App\Http\Controllers\Academic\SchoolProfileController;
 use App\Http\Controllers\Auth\ExistingAccountInvitationController;
 use App\Http\Controllers\Auth\MemberInvitationController;
 use App\Http\Controllers\Auth\MembershipController;
@@ -63,6 +65,27 @@ Route::middleware(RequireTenantHost::class)->group(function (): void {
         Route::get('/dashboard', [TenantAuthController::class, 'dashboard'])
             ->middleware('tenant.permission:school.view')
             ->name('tenant.dashboard');
+        Route::get('/school/profile', [SchoolProfileController::class, 'edit'])
+            ->middleware('tenant.permission:school.view')->name('tenant.school.edit');
+        Route::post('/school/profile', [SchoolProfileController::class, 'update'])
+            ->middleware('tenant.permission:school.update')->name('tenant.school.update');
+        Route::middleware('tenant.permission:academic.manage')->group(function (): void {
+            Route::get('/academic/periods', [AcademicController::class, 'periods'])->name('tenant.academic.periods');
+            Route::post('/academic/years', [AcademicController::class, 'createYear']);
+            Route::post('/academic/years/{yearUlid}', [AcademicController::class, 'updateYear']);
+            Route::post('/academic/years/{yearUlid}/semesters', [AcademicController::class, 'createSemester']);
+            Route::post('/academic/years/{yearUlid}/status', [AcademicController::class, 'transitionYear']);
+            Route::post('/academic/semesters/{semesterUlid}/status', [AcademicController::class, 'transitionSemester']);
+            Route::post('/academic/semesters/{semesterUlid}', [AcademicController::class, 'updateSemester']);
+            Route::get('/academic/profiles/{type}', [AcademicController::class, 'profiles'])->middleware('tenant.permission:members.view');
+            Route::post('/academic/profiles/{type}', [AcademicController::class, 'createProfile'])->middleware('tenant.permission:members.view');
+            Route::post('/academic/profiles/{type}/{profileUlid}', [AcademicController::class, 'updateProfile'])->middleware('tenant.permission:members.view');
+        });
+        Route::middleware('tenant.permission:subjects.manage')->group(function (): void {
+            Route::get('/academic/subjects', [AcademicController::class, 'subjects']);
+            Route::post('/academic/subjects', [AcademicController::class, 'createSubject']);
+            Route::post('/academic/subjects/{subjectUlid}', [AcademicController::class, 'updateSubject']);
+        });
         Route::post('/logout', [TenantAuthController::class, 'logout'])->name('tenant.logout');
     });
 });

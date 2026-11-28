@@ -53,7 +53,7 @@ final class SchoolProfileWorkflow
     }
 
     /** @return array{User, int} */
-    private function authorize(Request $request, TenantContext $context, string $permission, bool $lock): array
+    public function authorize(Request $request, TenantContext $context, string $permission, bool $lock): array
     {
         $session = $request->session();
         $user = $request->user();
