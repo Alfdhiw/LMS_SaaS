@@ -2,6 +2,14 @@
 
 **Status 25 November 2026:** PR6 **Approved** dan M1 **Closed by owner** berdasarkan approval akhir pengguna, untuk pengembangan lokal dengan data sintetis. Commit remediasi: `015e792`; CI commit tersebut sukses. Bukti browser HTTP/tamu kini tersedia (11 pemeriksaan, §10 laporan), tetapi demonstrasi login/MFA/recovery melalui HTTPS belum lengkap; aplikasi belum siap produksi atau data siswa nyata. M2 belum dimulai/diizinkan. Lihat [approval dan catatan penutupan](docs/runbooks/M1_FINAL_REVIEW.md#9-approval-akhir-pr6m1--25-november-2026) serta [acceptance checklist](docs/runbooks/M1_ACCEPTANCE_CHECKLIST.md).
 
+**Pembaruan 28 November 2026:** PR0 M2 disetujui pengguna pada branch `Milestone-2`, baseline `4b29461`
+(perbaikan isolasi file test M1). [PRD Academic](docs/prd/PRD_Modul_Academic_Administration_v0.1.md),
+[amendment ERD](docs/erd/ERD_M2_Academic_Amendment_v0.1.md), dan [master plan](docs/runbooks/M2_MASTER_PLAN.md)
+v0.1 berstatus Accepted, termasuk D01–D06 dan izin penyusunan PR1; tahap PR1 belum dimulai.
+Bukti keputusan dan izin DDL yang terpisah ada di [gate M2](docs/runbooks/M2_ARCHITECTURE_GATE.md).
+Belum ada fitur/schema M2 yang diimplementasikan atau migration baru yang dijalankan. DDL database aplikasi
+menunggu review migration plan/preflight PR1; PR2–PR6 belum diizinkan. Status M1/produksi tidak berubah.
+
 ## 1. Apa yang tersedia
 
 - Docker Compose: PHP 8.4 FPM, Nginx, PostgreSQL 17, Redis, queue worker, scheduler, Mailpit; Vite hanya dengan profile `assets`.
@@ -9,7 +17,9 @@
 - Struktur modul `app/Modules/{Tenancy,Identity,Platform}` untuk implementasi M1.
 - Landing page dan endpoint `/health` untuk tes, PHPUnit smoke tests yang memeriksa PostgreSQL/Redis, GitHub Actions CI.
 - Central tenant directory/provisioning/lifecycle, invitation email + resend, activation tenant-bound, serta test concurrency/host smoke M1.
-- PRD Master, 2 PRD modul, ADR-001/002, ERD v1.1, `AGENTS.md`, dan `docs/DOCUMENT_INDEX.md`.
+- PRD Master, 3 PRD modul Accepted (Auth/RBAC, SaaS Central dan Academic), ADR-001/002, ERD Core v1.1
+  beserta amendment Academic v0.1, `AGENTS.md`, dan `docs/DOCUMENT_INDEX.md`; rencana M2 Accepted,
+  tetapi implementasi dan izin DDL tetap mengikuti gate per tahap.
 - Contoh data tiga sekolah **sintetis** dalam JSON. Pada instalasi lokal yang direview 24 November 2026 sudah terdapat tiga sekolah sintetis aktif dan empat akun; ini bukan seeder otomatis atau kondisi semua instalasi.
 
 **Belum ada**: modul akademik M2+, billing, entitlement komersial, UI tenant sekolah yang lengkap, durable provisioning outbox, dan kesiapan production final. PRD/ADR/ERD aktif menjadi acuan; tidak ada data siswa nyata.

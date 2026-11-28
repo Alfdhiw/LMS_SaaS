@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased — M2 PR0 approval (28 November 2026)
+
+- Pengguna menyatakan "saya approval semua untuk PR0 di M2". Catat PR0 Approved, scope ACAD-001–007,
+  D01–D06 serta PRD Academic/amendment ERD/master plan v0.1 Accepted tanpa perubahan desain.
+- Sinkronkan gate, indeks, README, riwayat dokumen dan referensi AGENTS lokal (tetap di-ignore).
+  Core v1.1 tetap baseline; amendment melengkapi rincian M2, sinkronisasi dictionary/diagram masuk PR1.
+- Izin penyusunan PR1 tercatat, belum dilaksanakan pada pencatatan ini. PR2–PR6 belum diizinkan;
+  DDL aplikasi tetap menunggu daftar migration, preflight dan izin terpisah, bukan ikut dicentang.
+- Tidak mengubah source/test aplikasi, migration/schema/database, Docker, credential/role, permission,
+  status M1 atau Git commit/push/merge. Bukti uji sebelumnya tetap bertanggal, bukan hasil run baru.
+
+## Unreleased — M2 planning PR0 (27 November 2026)
+
+- Susun PRD Academic v0.1 untuk ACAD-001–007, amendment ERD 10 tabel, usulan keputusan D01–D06,
+  urutan PR0–PR6 dan approval gate terpisah untuk spesifikasi/tahap/DDL. Seluruh proposal menunggu review pengguna.
+- Sinkronkan indeks/README dan pengecualian Git ignore terbatas agar empat dokumen M2 baru dapat direview;
+  baseline Accepted, secret, dump, data siswa dan dokumen lokal lainnya tidak otomatis dibuka untuk Git.
+- Tidak mengubah kode aplikasi, schema/migration, Docker, credential/role database, permission tenant atau approval M1.
+
 ## Unreleased — M1 runtime permission fix (26 November 2026)
 
 - Pulihkan akses `www-data` pada log Laravel dan cache Blade existing yang dibuat root; isi log dipertahankan.

@@ -12,10 +12,16 @@
 /.vscode/
 /.fleet/
 /.m0-laravel-scaffold/
-# Project documentation is local by default; keep approvals and M1 review evidence versioned.
+# Project documentation is local by default; selectively track approval/review documents.
 /docs/*
 !/docs/
 !/docs/DOCUMENT_INDEX.md
+!/docs/prd/
+/docs/prd/*
+!/docs/prd/PRD_Modul_Academic_Administration_v0.1.md
+!/docs/erd/
+/docs/erd/*
+!/docs/erd/ERD_M2_Academic_Amendment_v0.1.md
 !/docs/runbooks/
 /docs/runbooks/*
 !/docs/runbooks/M1_ARCHITECTURE_GATE.md
@@ -23,6 +29,8 @@
 !/docs/runbooks/M1_ACCEPTANCE_CHECKLIST.md
 !/docs/runbooks/M1_TEST_MATRIX.md
 !/docs/runbooks/M1_FINAL_REVIEW.md
+!/docs/runbooks/M2_MASTER_PLAN.md
+!/docs/runbooks/M2_ARCHITECTURE_GATE.md
 # Only sanitized public-browser evidence; never raw DOM, cookies, certificates, or profiles.
 !/docs/evidence/
 /docs/evidence/*
